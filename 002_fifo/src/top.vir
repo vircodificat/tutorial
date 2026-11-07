@@ -49,11 +49,11 @@ pub mod Fifo {
         initial it <= 0
         if {
             // A push grows the queue unless it is already full.
-            when push && count != 2 {
+            when push && it != 2 {
                 it <= it + 1
             }
             // A pop shrinks the queue unless there is nothing to serve.
-            when pop && count != 0 {
+            when pop && it != 0 {
                 it <= it - 1
             }
         }

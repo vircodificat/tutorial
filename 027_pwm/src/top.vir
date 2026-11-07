@@ -26,7 +26,7 @@ pub mod Pwm {
     reg sweep : Word[8] {
         initial it <= 0
         if {
-            when sweep == 127 {
+            when it == 127 {
                 it <= 0
             }
             else {
