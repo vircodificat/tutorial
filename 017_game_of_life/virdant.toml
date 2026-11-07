@@ -1,0 +1,5 @@
+[project]
+name = "017_game_of_life"
+
+[prog]
+top = "top::GameOfLife"

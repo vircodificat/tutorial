@@ -1,0 +1,84 @@
+top top::Multiplier
+vcd trace.vcd
+
+# Pin every incoming port before use: an undriven port
+# may wander between timesteps and confuse the assertions.
+poke top.start false
+poke top.a 0
+poke top.b 0
+
+# --- 0 × 7 = 0 (zero multiplicand; accumulator stays quiet) ---
+poke top.start true
+poke top.a 0
+poke top.b 7
+tick
+poke top.start false
+tick
+tick
+tick
+tick
+advance
+assert top.done == true
+assert top.product == 0
+
+# --- 1 × 9 = 9 (multiplicand of 1: product equals b) ---
+poke top.start true
+poke top.a 1
+poke top.b 9
+tick
+poke top.start false
+tick
+tick
+tick
+tick
+advance
+assert top.done == true
+assert top.product == 9
+
+# --- 7 × 13 = 91 (mixed bits; also verifies exact cycle count) ---
+# done must still be low after only three work cycles ...
+poke top.start true
+poke top.a 7
+poke top.b 13
+tick
+poke top.start false
+tick
+tick
+tick
+advance
+assert top.done == false
+# ... and high on exactly the fourth work cycle.
+tick
+advance
+assert top.done == true
+assert top.product == 91
+
+# --- 15 × 15 = 225 (all bits set, largest inputs) ---
+poke top.start true
+poke top.a 15
+poke top.b 15
+tick
+poke top.start false
+tick
+tick
+tick
+tick
+advance
+assert top.done == true
+assert top.product == 225
+
+# --- 3 × 5 = 15 (small values, zero high nibble) ---
+poke top.start true
+poke top.a 3
+poke top.b 5
+tick
+poke top.start false
+tick
+tick
+tick
+tick
+advance
+assert top.done == true
+assert top.product == 15
+
+exit

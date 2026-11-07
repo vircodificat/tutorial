@@ -1,0 +1,771 @@
+top top::Passthrough
+vcd trace.vcd
+poke top.inp 0
+advance
+assert top.out == 0
+poke top.inp 1
+advance
+assert top.out == 1
+poke top.inp 2
+advance
+assert top.out == 2
+poke top.inp 3
+advance
+assert top.out == 3
+poke top.inp 4
+advance
+assert top.out == 4
+poke top.inp 5
+advance
+assert top.out == 5
+poke top.inp 6
+advance
+assert top.out == 6
+poke top.inp 7
+advance
+assert top.out == 7
+poke top.inp 8
+advance
+assert top.out == 8
+poke top.inp 9
+advance
+assert top.out == 9
+poke top.inp 10
+advance
+assert top.out == 10
+poke top.inp 11
+advance
+assert top.out == 11
+poke top.inp 12
+advance
+assert top.out == 12
+poke top.inp 13
+advance
+assert top.out == 13
+poke top.inp 14
+advance
+assert top.out == 14
+poke top.inp 15
+advance
+assert top.out == 15
+poke top.inp 16
+advance
+assert top.out == 16
+poke top.inp 17
+advance
+assert top.out == 17
+poke top.inp 18
+advance
+assert top.out == 18
+poke top.inp 19
+advance
+assert top.out == 19
+poke top.inp 20
+advance
+assert top.out == 20
+poke top.inp 21
+advance
+assert top.out == 21
+poke top.inp 22
+advance
+assert top.out == 22
+poke top.inp 23
+advance
+assert top.out == 23
+poke top.inp 24
+advance
+assert top.out == 24
+poke top.inp 25
+advance
+assert top.out == 25
+poke top.inp 26
+advance
+assert top.out == 26
+poke top.inp 27
+advance
+assert top.out == 27
+poke top.inp 28
+advance
+assert top.out == 28
+poke top.inp 29
+advance
+assert top.out == 29
+poke top.inp 30
+advance
+assert top.out == 30
+poke top.inp 31
+advance
+assert top.out == 31
+poke top.inp 32
+advance
+assert top.out == 32
+poke top.inp 33
+advance
+assert top.out == 33
+poke top.inp 34
+advance
+assert top.out == 34
+poke top.inp 35
+advance
+assert top.out == 35
+poke top.inp 36
+advance
+assert top.out == 36
+poke top.inp 37
+advance
+assert top.out == 37
+poke top.inp 38
+advance
+assert top.out == 38
+poke top.inp 39
+advance
+assert top.out == 39
+poke top.inp 40
+advance
+assert top.out == 40
+poke top.inp 41
+advance
+assert top.out == 41
+poke top.inp 42
+advance
+assert top.out == 42
+poke top.inp 43
+advance
+assert top.out == 43
+poke top.inp 44
+advance
+assert top.out == 44
+poke top.inp 45
+advance
+assert top.out == 45
+poke top.inp 46
+advance
+assert top.out == 46
+poke top.inp 47
+advance
+assert top.out == 47
+poke top.inp 48
+advance
+assert top.out == 48
+poke top.inp 49
+advance
+assert top.out == 49
+poke top.inp 50
+advance
+assert top.out == 50
+poke top.inp 51
+advance
+assert top.out == 51
+poke top.inp 52
+advance
+assert top.out == 52
+poke top.inp 53
+advance
+assert top.out == 53
+poke top.inp 54
+advance
+assert top.out == 54
+poke top.inp 55
+advance
+assert top.out == 55
+poke top.inp 56
+advance
+assert top.out == 56
+poke top.inp 57
+advance
+assert top.out == 57
+poke top.inp 58
+advance
+assert top.out == 58
+poke top.inp 59
+advance
+assert top.out == 59
+poke top.inp 60
+advance
+assert top.out == 60
+poke top.inp 61
+advance
+assert top.out == 61
+poke top.inp 62
+advance
+assert top.out == 62
+poke top.inp 63
+advance
+assert top.out == 63
+poke top.inp 64
+advance
+assert top.out == 64
+poke top.inp 65
+advance
+assert top.out == 65
+poke top.inp 66
+advance
+assert top.out == 66
+poke top.inp 67
+advance
+assert top.out == 67
+poke top.inp 68
+advance
+assert top.out == 68
+poke top.inp 69
+advance
+assert top.out == 69
+poke top.inp 70
+advance
+assert top.out == 70
+poke top.inp 71
+advance
+assert top.out == 71
+poke top.inp 72
+advance
+assert top.out == 72
+poke top.inp 73
+advance
+assert top.out == 73
+poke top.inp 74
+advance
+assert top.out == 74
+poke top.inp 75
+advance
+assert top.out == 75
+poke top.inp 76
+advance
+assert top.out == 76
+poke top.inp 77
+advance
+assert top.out == 77
+poke top.inp 78
+advance
+assert top.out == 78
+poke top.inp 79
+advance
+assert top.out == 79
+poke top.inp 80
+advance
+assert top.out == 80
+poke top.inp 81
+advance
+assert top.out == 81
+poke top.inp 82
+advance
+assert top.out == 82
+poke top.inp 83
+advance
+assert top.out == 83
+poke top.inp 84
+advance
+assert top.out == 84
+poke top.inp 85
+advance
+assert top.out == 85
+poke top.inp 86
+advance
+assert top.out == 86
+poke top.inp 87
+advance
+assert top.out == 87
+poke top.inp 88
+advance
+assert top.out == 88
+poke top.inp 89
+advance
+assert top.out == 89
+poke top.inp 90
+advance
+assert top.out == 90
+poke top.inp 91
+advance
+assert top.out == 91
+poke top.inp 92
+advance
+assert top.out == 92
+poke top.inp 93
+advance
+assert top.out == 93
+poke top.inp 94
+advance
+assert top.out == 94
+poke top.inp 95
+advance
+assert top.out == 95
+poke top.inp 96
+advance
+assert top.out == 96
+poke top.inp 97
+advance
+assert top.out == 97
+poke top.inp 98
+advance
+assert top.out == 98
+poke top.inp 99
+advance
+assert top.out == 99
+poke top.inp 100
+advance
+assert top.out == 100
+poke top.inp 101
+advance
+assert top.out == 101
+poke top.inp 102
+advance
+assert top.out == 102
+poke top.inp 103
+advance
+assert top.out == 103
+poke top.inp 104
+advance
+assert top.out == 104
+poke top.inp 105
+advance
+assert top.out == 105
+poke top.inp 106
+advance
+assert top.out == 106
+poke top.inp 107
+advance
+assert top.out == 107
+poke top.inp 108
+advance
+assert top.out == 108
+poke top.inp 109
+advance
+assert top.out == 109
+poke top.inp 110
+advance
+assert top.out == 110
+poke top.inp 111
+advance
+assert top.out == 111
+poke top.inp 112
+advance
+assert top.out == 112
+poke top.inp 113
+advance
+assert top.out == 113
+poke top.inp 114
+advance
+assert top.out == 114
+poke top.inp 115
+advance
+assert top.out == 115
+poke top.inp 116
+advance
+assert top.out == 116
+poke top.inp 117
+advance
+assert top.out == 117
+poke top.inp 118
+advance
+assert top.out == 118
+poke top.inp 119
+advance
+assert top.out == 119
+poke top.inp 120
+advance
+assert top.out == 120
+poke top.inp 121
+advance
+assert top.out == 121
+poke top.inp 122
+advance
+assert top.out == 122
+poke top.inp 123
+advance
+assert top.out == 123
+poke top.inp 124
+advance
+assert top.out == 124
+poke top.inp 125
+advance
+assert top.out == 125
+poke top.inp 126
+advance
+assert top.out == 126
+poke top.inp 127
+advance
+assert top.out == 127
+poke top.inp 128
+advance
+assert top.out == 128
+poke top.inp 129
+advance
+assert top.out == 129
+poke top.inp 130
+advance
+assert top.out == 130
+poke top.inp 131
+advance
+assert top.out == 131
+poke top.inp 132
+advance
+assert top.out == 132
+poke top.inp 133
+advance
+assert top.out == 133
+poke top.inp 134
+advance
+assert top.out == 134
+poke top.inp 135
+advance
+assert top.out == 135
+poke top.inp 136
+advance
+assert top.out == 136
+poke top.inp 137
+advance
+assert top.out == 137
+poke top.inp 138
+advance
+assert top.out == 138
+poke top.inp 139
+advance
+assert top.out == 139
+poke top.inp 140
+advance
+assert top.out == 140
+poke top.inp 141
+advance
+assert top.out == 141
+poke top.inp 142
+advance
+assert top.out == 142
+poke top.inp 143
+advance
+assert top.out == 143
+poke top.inp 144
+advance
+assert top.out == 144
+poke top.inp 145
+advance
+assert top.out == 145
+poke top.inp 146
+advance
+assert top.out == 146
+poke top.inp 147
+advance
+assert top.out == 147
+poke top.inp 148
+advance
+assert top.out == 148
+poke top.inp 149
+advance
+assert top.out == 149
+poke top.inp 150
+advance
+assert top.out == 150
+poke top.inp 151
+advance
+assert top.out == 151
+poke top.inp 152
+advance
+assert top.out == 152
+poke top.inp 153
+advance
+assert top.out == 153
+poke top.inp 154
+advance
+assert top.out == 154
+poke top.inp 155
+advance
+assert top.out == 155
+poke top.inp 156
+advance
+assert top.out == 156
+poke top.inp 157
+advance
+assert top.out == 157
+poke top.inp 158
+advance
+assert top.out == 158
+poke top.inp 159
+advance
+assert top.out == 159
+poke top.inp 160
+advance
+assert top.out == 160
+poke top.inp 161
+advance
+assert top.out == 161
+poke top.inp 162
+advance
+assert top.out == 162
+poke top.inp 163
+advance
+assert top.out == 163
+poke top.inp 164
+advance
+assert top.out == 164
+poke top.inp 165
+advance
+assert top.out == 165
+poke top.inp 166
+advance
+assert top.out == 166
+poke top.inp 167
+advance
+assert top.out == 167
+poke top.inp 168
+advance
+assert top.out == 168
+poke top.inp 169
+advance
+assert top.out == 169
+poke top.inp 170
+advance
+assert top.out == 170
+poke top.inp 171
+advance
+assert top.out == 171
+poke top.inp 172
+advance
+assert top.out == 172
+poke top.inp 173
+advance
+assert top.out == 173
+poke top.inp 174
+advance
+assert top.out == 174
+poke top.inp 175
+advance
+assert top.out == 175
+poke top.inp 176
+advance
+assert top.out == 176
+poke top.inp 177
+advance
+assert top.out == 177
+poke top.inp 178
+advance
+assert top.out == 178
+poke top.inp 179
+advance
+assert top.out == 179
+poke top.inp 180
+advance
+assert top.out == 180
+poke top.inp 181
+advance
+assert top.out == 181
+poke top.inp 182
+advance
+assert top.out == 182
+poke top.inp 183
+advance
+assert top.out == 183
+poke top.inp 184
+advance
+assert top.out == 184
+poke top.inp 185
+advance
+assert top.out == 185
+poke top.inp 186
+advance
+assert top.out == 186
+poke top.inp 187
+advance
+assert top.out == 187
+poke top.inp 188
+advance
+assert top.out == 188
+poke top.inp 189
+advance
+assert top.out == 189
+poke top.inp 190
+advance
+assert top.out == 190
+poke top.inp 191
+advance
+assert top.out == 191
+poke top.inp 192
+advance
+assert top.out == 192
+poke top.inp 193
+advance
+assert top.out == 193
+poke top.inp 194
+advance
+assert top.out == 194
+poke top.inp 195
+advance
+assert top.out == 195
+poke top.inp 196
+advance
+assert top.out == 196
+poke top.inp 197
+advance
+assert top.out == 197
+poke top.inp 198
+advance
+assert top.out == 198
+poke top.inp 199
+advance
+assert top.out == 199
+poke top.inp 200
+advance
+assert top.out == 200
+poke top.inp 201
+advance
+assert top.out == 201
+poke top.inp 202
+advance
+assert top.out == 202
+poke top.inp 203
+advance
+assert top.out == 203
+poke top.inp 204
+advance
+assert top.out == 204
+poke top.inp 205
+advance
+assert top.out == 205
+poke top.inp 206
+advance
+assert top.out == 206
+poke top.inp 207
+advance
+assert top.out == 207
+poke top.inp 208
+advance
+assert top.out == 208
+poke top.inp 209
+advance
+assert top.out == 209
+poke top.inp 210
+advance
+assert top.out == 210
+poke top.inp 211
+advance
+assert top.out == 211
+poke top.inp 212
+advance
+assert top.out == 212
+poke top.inp 213
+advance
+assert top.out == 213
+poke top.inp 214
+advance
+assert top.out == 214
+poke top.inp 215
+advance
+assert top.out == 215
+poke top.inp 216
+advance
+assert top.out == 216
+poke top.inp 217
+advance
+assert top.out == 217
+poke top.inp 218
+advance
+assert top.out == 218
+poke top.inp 219
+advance
+assert top.out == 219
+poke top.inp 220
+advance
+assert top.out == 220
+poke top.inp 221
+advance
+assert top.out == 221
+poke top.inp 222
+advance
+assert top.out == 222
+poke top.inp 223
+advance
+assert top.out == 223
+poke top.inp 224
+advance
+assert top.out == 224
+poke top.inp 225
+advance
+assert top.out == 225
+poke top.inp 226
+advance
+assert top.out == 226
+poke top.inp 227
+advance
+assert top.out == 227
+poke top.inp 228
+advance
+assert top.out == 228
+poke top.inp 229
+advance
+assert top.out == 229
+poke top.inp 230
+advance
+assert top.out == 230
+poke top.inp 231
+advance
+assert top.out == 231
+poke top.inp 232
+advance
+assert top.out == 232
+poke top.inp 233
+advance
+assert top.out == 233
+poke top.inp 234
+advance
+assert top.out == 234
+poke top.inp 235
+advance
+assert top.out == 235
+poke top.inp 236
+advance
+assert top.out == 236
+poke top.inp 237
+advance
+assert top.out == 237
+poke top.inp 238
+advance
+assert top.out == 238
+poke top.inp 239
+advance
+assert top.out == 239
+poke top.inp 240
+advance
+assert top.out == 240
+poke top.inp 241
+advance
+assert top.out == 241
+poke top.inp 242
+advance
+assert top.out == 242
+poke top.inp 243
+advance
+assert top.out == 243
+poke top.inp 244
+advance
+assert top.out == 244
+poke top.inp 245
+advance
+assert top.out == 245
+poke top.inp 246
+advance
+assert top.out == 246
+poke top.inp 247
+advance
+assert top.out == 247
+poke top.inp 248
+advance
+assert top.out == 248
+poke top.inp 249
+advance
+assert top.out == 249
+poke top.inp 250
+advance
+assert top.out == 250
+poke top.inp 251
+advance
+assert top.out == 251
+poke top.inp 252
+advance
+assert top.out == 252
+poke top.inp 253
+advance
+assert top.out == 253
+poke top.inp 254
+advance
+assert top.out == 254
+poke top.inp 255
+advance
+assert top.out == 255
+exit

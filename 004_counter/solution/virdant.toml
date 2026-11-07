@@ -1,0 +1,5 @@
+[project]
+name = "004_counter"
+
+[prog]
+top = "top::ModCounter"

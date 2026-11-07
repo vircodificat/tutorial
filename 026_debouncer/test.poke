@@ -1,0 +1,113 @@
+top top::Debouncer
+vcd trace.vcd
+
+# Pin the raw input low and give the counter two quiet cycles to
+# settle. Power-on leaves the debouncer believing the button rests
+# unpressed.
+poke top.raw false
+tick
+tick
+assert top.pressed == false
+assert top.disagree_count == 0
+
+# --- A clean press: sixteen quiet cycles of disagreement. ---
+poke top.raw true
+tick 16
+assert top.pressed == true
+assert top.disagree_count == 0
+
+# Hold the press a while longer: still pressed, and the counter
+# stays put because there is nothing left to argue about.
+tick 4
+assert top.pressed == true
+
+# --- A clean release, same sixteen-cycle courtesy. ---
+poke top.raw false
+tick 16
+assert top.pressed == false
+assert top.disagree_count == 0
+
+# --- The bounce storm. ---
+# Real switches chatter: contacts close, spring apart, close again,
+# for milliseconds on end. No burst below is long enough to be a
+# press, and every burst is followed by paid-back quiet time. After
+# two quiet cycles the counter must be empty again.
+
+# Burst 1: two cycles of chatter.
+poke top.raw true
+tick 2
+poke top.raw false
+tick 2
+assert top.pressed == false
+assert top.disagree_count == 0
+
+# Burst 2: three cycles.
+poke top.raw true
+tick 3
+poke top.raw false
+tick 2
+assert top.pressed == false
+assert top.disagree_count == 0
+
+# Burst 3: two.
+poke top.raw true
+tick 2
+poke top.raw false
+tick 2
+assert top.pressed == false
+
+# Burst 4: three.
+poke top.raw true
+tick 3
+poke top.raw false
+tick 2
+assert top.pressed == false
+
+# Burst 5: two.
+poke top.raw true
+tick 2
+poke top.raw false
+tick 2
+assert top.pressed == false
+
+# Burst 6: the longest burst of chatter yet.
+poke top.raw true
+tick 3
+poke top.raw false
+tick 2
+assert top.pressed == false
+assert top.disagree_count == 0
+
+# Burst 7: one more tap. Not once in this storm has the raw input
+# held still for sixteen cycles, so the button is still not pressed.
+poke top.raw true
+tick
+assert top.pressed == false
+tick 2
+poke top.raw false
+tick 2
+assert top.pressed == false
+assert top.disagree_count == 0
+
+# --- The storm ends, and the press finally means it. ---
+poke top.raw true
+tick 16
+assert top.pressed == true
+tick 4
+assert top.pressed == true
+
+# Release, cleanly this time.
+poke top.raw false
+tick 16
+assert top.pressed == false
+assert top.disagree_count == 0
+
+# --- One last pinprick: a single noisy cycle against stillness. ---
+poke top.raw true
+tick
+poke top.raw false
+tick 16
+assert top.pressed == false
+assert top.disagree_count == 0
+
+exit

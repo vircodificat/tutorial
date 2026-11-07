@@ -1,0 +1,5 @@
+[project]
+name = "006_gcd"
+
+[prog]
+top = "top::Gcd"

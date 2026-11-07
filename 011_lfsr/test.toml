@@ -1,0 +1,3 @@
+kind = "check"
+description = "Tutorial lesson: 8-bit maximal-length linear-feedback shift register."
+expect = "ok"

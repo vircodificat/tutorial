@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial generics lesson: one width-generic counter instantiated at two widths."
+script = "test.poke"

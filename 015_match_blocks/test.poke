@@ -1,0 +1,97 @@
+top top::Alu
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.a 0
+poke top.b 0
+poke top.opcode #Add
+
+# --- Adding: a plain sum, a sum that rolls over the top, and zero. ---
+poke top.a 5
+poke top.b 3
+advance
+assert top.result == 8
+assert top.is_arithmetic == true
+assert top.can_wrap == true
+
+poke top.a 200
+poke top.b 100
+advance
+assert top.result == 44
+
+poke top.a 0
+poke top.b 0
+advance
+assert top.result == 0
+
+# --- Subtracting: the guard keeps the result out of the cellar. ---
+poke top.opcode #Sub
+poke top.a 7
+poke top.b 3
+advance
+assert top.result == 4
+assert top.is_arithmetic == true
+assert top.can_wrap == false
+
+# Right at the boundary: 5 - 5 is a subtraction that just fits.
+poke top.a 5
+poke top.b 5
+advance
+assert top.result == 0
+
+# These two must clamp to zero, not wrap around the bottom.
+poke top.a 3
+poke top.b 7
+advance
+assert top.result == 0
+
+poke top.a 0
+poke top.b 1
+advance
+assert top.result == 0
+
+# A subtraction that fits with room to spare.
+poke top.a 255
+poke top.b 1
+advance
+assert top.result == 254
+
+# --- And: bitwise, so a < b changes nothing about the result. ---
+poke top.opcode #And
+poke top.a 0xF0
+poke top.b 0x0F
+advance
+assert top.result == 0
+assert top.is_arithmetic == false
+assert top.can_wrap == false
+
+poke top.a 0xAA
+poke top.b 0xFF
+advance
+assert top.result == 0xAA
+
+poke top.a 3
+poke top.b 7
+advance
+assert top.result == 3
+
+# --- Or: bitwise again, with patterns that fill and empty the byte. ---
+poke top.opcode #Or
+poke top.a 0xF0
+poke top.b 0x0F
+advance
+assert top.result == 0xFF
+
+poke top.a 0
+poke top.b 0
+advance
+assert top.result == 0
+
+poke top.a 3
+poke top.b 8
+advance
+assert top.result == 11
+
+exit

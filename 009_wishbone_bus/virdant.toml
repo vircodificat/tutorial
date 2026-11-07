@@ -1,0 +1,5 @@
+[project]
+name = "009_wishbone_bus"
+
+[prog]
+top = "top::Top"

@@ -1,0 +1,122 @@
+top top::GameOfLife
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+poke top.load false
+poke top.step false
+poke top.pattern 0
+
+# --- A fresh garden is completely empty. ---
+assert top.grid == 0
+
+# --- Plant a horizontal blinker across the middle row. ---
+poke top.load true
+poke top.pattern 0x00E0
+tick
+poke top.load false
+poke top.pattern 0
+advance
+assert top.grid == 0x00E0
+
+# --- One generation: the blinker stands up. ---
+poke top.step true
+tick
+poke top.step false
+advance
+assert top.grid == 0x0444
+
+# --- The next generation: it lies back down. ---
+poke top.step true
+tick
+poke top.step false
+advance
+assert top.grid == 0x00E0
+
+poke top.step true
+tick
+poke top.step false
+advance
+assert top.grid == 0x0444
+
+# --- Plant a vertical blinker in the second column. ---
+poke top.load true
+poke top.pattern 0x0222
+tick
+poke top.load false
+poke top.pattern 0
+advance
+assert top.grid == 0x0222
+
+poke top.step true
+tick
+poke top.step false
+advance
+assert top.grid == 0x0070
+
+poke top.step true
+tick
+poke top.step false
+advance
+assert top.grid == 0x0222
+
+# --- A block in the bottom-left corner is a still life: ---
+# --- every cell has exactly three neighbors, forever.   ---
+poke top.load true
+poke top.pattern 0x3300
+tick
+poke top.load false
+poke top.pattern 0
+advance
+assert top.grid == 0x3300
+
+poke top.step true
+tick
+poke top.step false
+advance
+assert top.grid == 0x3300
+
+poke top.step true
+tick
+poke top.step false
+advance
+assert top.grid == 0x3300
+
+poke top.step true
+tick
+poke top.step false
+advance
+assert top.grid == 0x3300
+
+# --- A lone cell dies of loneliness. ---
+poke top.load true
+poke top.pattern 0x0020
+tick
+poke top.load false
+poke top.pattern 0
+advance
+assert top.grid == 0x0020
+
+poke top.step true
+tick
+poke top.step false
+advance
+assert top.grid == 0
+
+# --- An overcrowded garden: the middle starves with four ---
+# --- neighbors, but the survivors settle into a steady   ---
+# --- diamond ring, each cell content with exactly two.   ---
+poke top.load true
+poke top.pattern 0x0525
+tick
+poke top.load false
+poke top.pattern 0
+advance
+assert top.grid == 0x0525
+
+poke top.step true
+tick
+poke top.step false
+advance
+assert top.grid == 0x0252
+
+exit

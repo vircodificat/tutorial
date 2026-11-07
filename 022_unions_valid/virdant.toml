@@ -1,0 +1,5 @@
+[project]
+name = "022_unions_valid"
+
+[prog]
+top = "top::GreenhouseMonitor"

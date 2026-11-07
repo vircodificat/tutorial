@@ -1,0 +1,196 @@
+//! The gallery: every hex digit, drawn in seven-segment ASCII art.
+
+import seven_segment
+import uart_sender
+
+//> `Top` binds to the virtual board, decodes each hex digit with
+//> `SevenSegment`, and prints the segment pattern of every digit
+//> as a small piece of ASCII art over the UART.
+pub mod Top for virt::Virt {
+    incoming clock : Clock
+
+    // The board's other pins.  This program never listens to the
+    // UART's receive line or the SPI flash, but the platform has
+    // no defaults for them, so they must be declared -- `unused`
+    // says the silence is on purpose.
+    incoming rx : Bit
+    incoming spi_miso : Bit
+
+    //> The UART line to the host, where the gallery goes.
+    outgoing tx : Bit {
+        it := sender.tx
+    }
+
+    //> `@Valid(0)` once the last character is safely on the wire.
+    outgoing exit : Valid[Word[8]] {
+        it := if {
+            when !active && sender.ready => @Valid(0)
+            else => @Invalid()
+        }
+    }
+
+    unused rx
+    unused spi_miso
+
+    // The decoder is the star of this lesson: one hex nibble in,
+    // seven segment bits out.
+    mod seg of seven_segment::SevenSegment {
+        it.digit := digit
+    }
+
+    // Serializes one character onto `tx` per handshake.
+    mod sender of UartSender {
+        it.clock := clock
+        it.data := character
+        it.data_valid := active && boot_done
+    }
+
+    // The simulated board trusts the first start bit only after
+    // the line has idled high for a while, so hold quiet for 256
+    // cycles after power-on.
+    reg boot : Word[8] {
+        initial it <= 0
+        if {
+            when it != 255 {
+                it <= it + 1
+            }
+        }
+    }
+
+    // The cursor that walks the gallery, one character per
+    // handshake: `active` is up while characters remain, `digit`
+    // is the drawing on display, and `row`/`col` point into its
+    // picture.  Every register moves only on `accept`, so the
+    // whole cursor steps as one.
+    reg active : Bit {
+        initial it <= true
+        if {
+            when accept && col == row_len && row == 8 && digit == 15 {
+                it <= false
+            }
+        }
+    }
+
+    reg digit : Word[4] {
+        initial it <= 0
+        if {
+            when accept && col == row_len && row == 8 {
+                it <= it + 1
+            }
+        }
+    }
+
+    // The nine lines of one digit's frame: line 0 is the label,
+    // lines 1 through 7 are the seven art rows, and line 8 is the
+    // blank separator before the next frame.
+    reg row : Word[4] {
+        initial it <= 0
+        if {
+            when accept && col == row_len && row == 8 {
+                it <= 0
+            }
+            when accept && col == row_len {
+                it <= it + 1
+            }
+        }
+    }
+
+    reg col : Word[3] {
+        initial it <= 0
+        if {
+            when accept && col == row_len {
+                it <= 0
+            }
+            when accept {
+                it <= it + 1
+            }
+        }
+    }
+
+    // A character goes on the wire exactly when the sender takes
+    // one -- and never before the boot quiet period is over.
+    wire accept : Bit {
+        it := active && boot_done && sender.ready
+    }
+
+    wire boot_done : Bit {
+        it := boot == 255
+    }
+
+    // Length of the current line, not counting the newline that
+    // closes it: the label line is two characters, the art rows
+    // are six or seven depending on their shape, and the blank
+    // separator line is empty.  Reaching `row_len` is the signal
+    // to emit the newline.
+    wire row_len : Word[3] {
+        it := if {
+            when row == 0 => 3
+            when row == 8 => 0
+            // The a, g, and d rows are four bars wide; the paired
+            // side rows reach one column further on each side.
+            when row == 1 || row == 4 || row == 7 => 6
+            else => 7
+        }
+    }
+
+    // The label line reads " 0:" -- a leading space, the digit
+    // itself as '0'..'9' and then 'A'..'F' (both runs are one
+    // addition away from the digit), and a colon.  The leading
+    // space doubles as a kindness to the board's line-watching:
+    // its short high pulse gives a crisp first measurement of the
+    // bit period.
+    wire hex_char : Word[8] {
+        it := if {
+            when digit < 10 => word(0w4, digit) + 0x30
+            else => word(0w4, digit) + 0x37
+        }
+    }
+
+    // Which segment a middle row displays: the a row, the g row,
+    // or the d row.
+    wire middle_bit : Bit {
+        it := if {
+            when row == 1 => seg.segments[0]
+            when row == 4 => seg.segments[6]
+            else => seg.segments[3]
+        }
+    }
+
+    // Which segment a side row displays on its left edge: f in
+    // the top half of the picture, e in the bottom half.
+    wire left_bit : Bit {
+        it := if {
+            when row == 2 || row == 3 => seg.segments[5]
+            else => seg.segments[4]
+        }
+    }
+
+    // And on its right edge: b up top, c down below.
+    wire right_bit : Bit {
+        it := if {
+            when row == 2 || row == 3 => seg.segments[1]
+            else => seg.segments[2]
+        }
+    }
+
+    // The character at the cursor.  The first arm catches the
+    // newline that closes every line; the rest just choose
+    // between '#' (0x23) and ' ' (0x20).
+    wire character : Word[8] {
+        it := if {
+            when col == row_len => 0x0a
+            when row == 0 && col == 0 => 0x20
+            when row == 0 && col == 1 => hex_char
+            when row == 0 => 0x3a
+            when row == 1 || row == 4 || row == 7 => if {
+                when middle_bit && col >= 2 => 0x23
+                else => 0x20
+            }
+            else => if {
+                when col == 1 && left_bit => 0x23
+                when col == 6 && right_bit => 0x23
+                else => 0x20
+            }
+        }
+    }
+}

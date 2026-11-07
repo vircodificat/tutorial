@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial pipeline lesson: a two-stage pipe with a stage register and valid/ready flow control."
+script = "test.poke"

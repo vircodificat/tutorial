@@ -1,0 +1,140 @@
+top top::WaterTank
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.drain false
+poke top.fill false
+poke top.drop false
+
+# --- A fresh tank starts empty and unbrimming. ---
+assert top.level == 0
+assert top.brimming == false
+
+# --- A drop raises the level by one. ---
+poke top.drop true
+tick
+poke top.drop false
+advance
+assert top.level == 1
+
+poke top.drop true
+tick
+poke top.drop false
+advance
+assert top.level == 2
+
+# --- A quiet cycle: no arm fires, so the water holds. ---
+tick
+advance
+assert top.level == 2
+
+# --- Conflict: fill and drop land on the same edge. ---
+# Fill outranks drop: the tank brims, and the drop is lost.
+poke top.fill true
+poke top.drop true
+tick
+poke top.fill false
+poke top.drop false
+advance
+assert top.level == 9
+assert top.brimming == true
+
+# --- A drop at the brim has nowhere left to go. ---
+poke top.drop true
+tick
+poke top.drop false
+advance
+assert top.level == 9
+assert top.brimming == true
+
+# --- A drain on its own empties the tank. ---
+poke top.drain true
+tick
+poke top.drain false
+advance
+assert top.level == 0
+assert top.brimming == false
+
+# --- Climb back up for the colliding cycles. ---
+poke top.drop true
+tick
+poke top.drop false
+advance
+assert top.level == 1
+
+poke top.drop true
+tick
+poke top.drop false
+advance
+assert top.level == 2
+
+# --- Conflict: drain and drop land on the same edge. ---
+# Drain outranks drop: the tank empties instead of rising.
+poke top.drain true
+poke top.drop true
+tick
+poke top.drain false
+poke top.drop false
+advance
+assert top.level == 0
+
+# --- Climb back up again. ---
+poke top.drop true
+tick
+poke top.drop false
+advance
+assert top.level == 1
+
+poke top.drop true
+tick
+poke top.drop false
+advance
+assert top.level == 2
+
+# --- Conflict: drain and fill land on the same edge. ---
+# Drain outranks fill: the tank empties instead of brimming.
+poke top.drain true
+poke top.fill true
+tick
+poke top.drain false
+poke top.fill false
+advance
+assert top.level == 0
+assert top.brimming == false
+
+# --- Climb back up one last time. ---
+poke top.drop true
+tick
+poke top.drop false
+advance
+assert top.level == 1
+
+poke top.drop true
+tick
+poke top.drop false
+advance
+assert top.level == 2
+
+# --- Conflict: all three requests on the same edge. ---
+# Drain is the boss of the whole edge: the tank empties.
+poke top.drain true
+poke top.fill true
+poke top.drop true
+tick
+poke top.drain false
+poke top.fill false
+poke top.drop false
+advance
+assert top.level == 0
+
+# --- One quiet drop to close the afternoon. ---
+poke top.drop true
+tick
+poke top.drop false
+advance
+assert top.level == 1
+assert top.brimming == false
+
+exit

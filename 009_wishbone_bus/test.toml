@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial wishbone lesson: run one bus transaction program across a socket-connected master and memory."
+script = "test.poke"

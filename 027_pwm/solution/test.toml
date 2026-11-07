@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial PWM lesson: sweep a period counter and dim an LED by duty cycle."
+script = "test.poke"

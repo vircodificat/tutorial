@@ -1,0 +1,69 @@
+//! A UART transmitter: walks one byte onto the wire, bit by bit.
+
+//> `UartSender` sends a byte over a single wire, one bit at a time.
+//> The frame is the whole protocol: one low start bit, the eight
+//> data bits with the least significant one first, and one high
+//> stop bit. The line idles high between frames.
+pub mod UartSender {
+    incoming clock : Clock
+
+    // Raising `send` starts a frame carrying the byte on `data`.
+    // A send while a frame is still going is quietly ignored:
+    // the transmitter stays busy until the stop bit is out.
+    incoming send : Bit
+    incoming data : Word[8]
+
+    // The pace here is a fast fake baud: one bit every 4 clock
+    // cycles. A real UART counts out 115200 against a real
+    // clock -- the arithmetic is identical. A Word[2] wraps 3
+    // back around to 0, so the wire gets a fresh bit every
+    // fourth cycle for free.
+    reg phase : Word[2] {
+        initial it <= 0
+        if {
+            when bits_left != 0 {
+                it <= it + 1
+            }
+        }
+    }
+
+    // `bits_left` counts the ten bits of the frame as they leave:
+    // 10 means a frame is in flight, 0 means the line is idle and
+    // a new `send` may load one.
+    reg bits_left : Word[4] {
+        initial it <= 0
+        if {
+            when send && it == 0 {
+                it <= 10
+            }
+            when it != 0 && phase == 3 {
+                it <= it - 1
+            }
+        }
+    }
+
+    // The whole frame rides in one shift register: stop bit up
+    // top, data byte in the middle, start bit at the bottom.
+    // `word()` lists bits most-significant first, and bits leave
+    // through bit 0 -- so the start bit, the last argument, is
+    // the first bit out. Shifts refill the top with 1s, the
+    // line's resting value.
+    reg shifter : Word[10] {
+        // All ones: the line powers up resting high.
+        initial it <= 0x3FF
+        if {
+            when send && bits_left == 0 {
+                it <= word(1w1, data, 0w1)
+            }
+            when bits_left != 0 && phase == 3 {
+                it <= word(1w1, it[10..1])
+            }
+        }
+    }
+
+    // `tx` shows whichever bit of the frame is at the exit; on
+    // an idle line the shifter is all 1s, so the line rests high.
+    outgoing tx : Bit {
+        it := shifter[0]
+    }
+}

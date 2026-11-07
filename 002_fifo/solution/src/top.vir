@@ -1,0 +1,77 @@
+//! A tiny first-in-first-out queue, two bytes deep.
+
+//> `Fifo` is a little queue for bytes: `push` adds a byte to the
+//> back of the line, and `pop` serves the oldest byte on `out`,
+//> first come, first served.
+pub mod Fifo {
+    incoming clock : Clock
+
+    // The queue serves at most one operation per cycle, and it
+    // quietly ignores an operation it cannot serve: a `push` into
+    // a full queue, or a `pop` from an empty one.
+    incoming push : Bit
+    incoming push_data : Word[8]
+    incoming pop : Bit
+
+    // The whole queue is just two registers holding bytes in line.
+    // `slot0` is the front of the line: the next byte to be served.
+    // A reg keeps its value until a `when` arm fires, so on a quiet
+    // cycle every byte stays exactly where it is.
+    reg slot0 : Word[8] {
+        initial it <= 0
+        if {
+            // An empty queue takes a push straight into the front.
+            when push && count == 0 {
+                it <= push_data
+            }
+            // A pop from a full queue slides the back byte up front.
+            when pop && count == 2 {
+                it <= slot1
+            }
+        }
+    }
+
+    // `slot1` is the back of the line, where a new byte waits its turn.
+    reg slot1 : Word[8] {
+        initial it <= 0
+        if {
+            // Pushing into a one-byte queue fills the back slot.
+            when push && count == 1 {
+                it <= push_data
+            }
+        }
+    }
+
+    // `count` tracks how many slots hold real bytes: 0, 1, or 2.
+    // A Word[2] can count 0 through 3, so it has room to spare.
+    // One statement-level `if` moves all three registers together:
+    // whatever the cycle brings, the line moves as one.
+    reg count : Word[2] {
+        initial it <= 0
+        if {
+            // A push grows the queue unless it is already full.
+            when push && count != 2 {
+                it <= it + 1
+            }
+            // A pop shrinks the queue unless there is nothing to serve.
+            when pop && count != 0 {
+                it <= it - 1
+            }
+        }
+    }
+
+    // `out` always shows the byte at the front of the line.
+    outgoing out : Word[8] {
+        it := slot0
+    }
+
+    // `empty` and `full` keep the outside world posted on the
+    // queue's mood, read straight off `count`.
+    outgoing empty : Bit {
+        it := count == 0
+    }
+
+    outgoing full : Bit {
+        it := count == 2
+    }
+}

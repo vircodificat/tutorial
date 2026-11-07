@@ -1,0 +1,5 @@
+[project]
+name = "011_lfsr"
+
+[prog]
+top = "top::Lfsr"

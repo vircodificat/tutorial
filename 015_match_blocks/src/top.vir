@@ -1,0 +1,70 @@
+//! A tiny ALU, and a tour of `match`: arms that produce values and
+//! arms that perform work.
+
+//> The operation the ALU should carry out on `a` and `b`.
+pub enum type Op {
+    Add = 0w2
+    Sub = 1w2
+    And = 2w2
+    Or  = 3w2
+}
+
+//> A tiny arithmetic-logic unit. `opcode` chooses what happens to
+//> `a` and `b`; `result` carries the answer, and the two flag ports
+//> describe the op that ran.
+pub mod Alu {
+    //> First operand.
+    incoming a : Word[8]
+
+    //> Second operand.
+    incoming b : Word[8]
+
+    //> Selects the operation.
+    incoming opcode : Op
+
+    //> The answer for the selected operation.
+    outgoing result : Word[8] dependson a, b, opcode {
+        // This match sits in expression position, so every arm
+        // PRODUCES a value with `=>` -- the match itself is the
+        // value driven into `result`. Arms are tried in order, and
+        // the first matching arm wins. A guard (`if { when ... }`)
+        // narrows an arm further; the guarded arm still covers
+        // `#Sub` for exhaustiveness, so no `else` is needed.
+        it := match opcode {
+            with #Add => a + b
+            with #Sub if {
+                // Saturating subtraction: clamp at zero rather
+                // than wrap around the bottom of the word.
+                when a >= b => 0
+                else => a - b
+            }
+            with #And => a & b
+            with #Or  => a | b
+        }
+    }
+
+    //> True when the selected op does word arithmetic.
+    outgoing is_arithmetic : Bit dependson opcode
+
+    //> True when the selected op may wrap around the word.
+    outgoing can_wrap : Bit dependson opcode
+
+    // This match sits in statement position, so every arm
+    // PERFORMS with `{ ... }` -- driving two wires at once, which
+    // is what statement matches are for. The `else` arm catches
+    // every variant the arms above don't name, and must come last.
+    match opcode {
+        with #Add {
+            is_arithmetic := true
+            can_wrap      := true
+        }
+        with #Sub {
+            is_arithmetic := true
+            can_wrap      := false
+        }
+        else {
+            is_arithmetic := false
+            can_wrap      := false
+        }
+    }
+}

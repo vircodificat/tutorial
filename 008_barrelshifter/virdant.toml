@@ -1,0 +1,5 @@
+[project]
+name = "008_barrelshifter"
+
+[prog]
+top = "top::BarrelShifter"

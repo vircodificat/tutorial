@@ -1,0 +1,5 @@
+[project]
+name = "001_buffer"
+
+[prog]
+top = "top::Buffer"

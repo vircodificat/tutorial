@@ -1,0 +1,70 @@
+//! Euclid's greatest-common-divisor engine.
+
+// A finite state machine (FSM) circles through three phases:
+// waiting (Idle), computing (Run), and presenting the answer (Done).
+// Hardware loops not by iterating a variable, but by returning
+// to a state -- a circuit has no `while` or `for`.
+enum type State {
+    Idle  // waiting for a start pulse
+    Run   // subtracting until the two values meet
+    Done  // answer is stable in `x`; `done` is high
+}
+
+//> `Gcd` computes the greatest common divisor of two 8-bit numbers.
+//> Pulse `start` for one cycle to begin; read `result` when `done` is high.
+pub mod Gcd {
+    incoming clock  : Clock
+    incoming start  : Bit
+    incoming a      : Word[8]
+    incoming b      : Word[8]
+
+    outgoing busy   : Bit
+    outgoing done   : Bit
+    outgoing result : Word[8]
+
+    // `state` is the engine control: one-hot encoded by default, so
+    // each enumerant occupies exactly one bit of a 3-bit register.
+    reg state : State {
+        initial it <= #Idle
+        // The state machine has two behaviours: Run steps the algorithm;
+        // Idle and Done both wait for a start pulse to load new inputs.
+        match it {
+            with #Run if {
+                when x == y { it <= #Done }
+            }
+            else if {
+                when start && b != 0 { it <= #Run }
+            }
+        }
+    }
+
+    // `x` and `y` hold the working copies of a and b.
+    // The algorithm subtracts the smaller from the larger until
+    // they are equal; that common value is the GCD.
+    reg x : Word[8]
+    reg y : Word[8]
+
+    // `match` in expression position (with `=>`) produces a value.
+    busy   := match state { with #Idle => false else => true  }
+    done   := match state { with #Done => true  else => false }
+    result := x
+
+    // `match` in statement position (with `{}`) drives registers.
+    // Euclid's step: subtract the smaller from the larger each cycle.
+    match state {
+        with #Run if {
+            when x > y {
+                x <= x - y
+            }
+            when x < y {
+                x <= x - y
+            }
+        }
+        else if {
+            when start && b != 0 {
+                x <= a
+                y <= b
+            }
+        }
+    }
+}

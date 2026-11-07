@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial let-bindings lesson: three views of one byte-pair addition."
+script = "test.poke"

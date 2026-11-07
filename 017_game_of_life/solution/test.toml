@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial Game of Life lesson: grow a 4x4 colony one generation per clock."
+script = "test.poke"

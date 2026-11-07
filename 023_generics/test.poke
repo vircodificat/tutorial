@@ -1,0 +1,123 @@
+top top::Top
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.enable_narrow false
+poke top.load_narrow false
+poke top.load_value_narrow 0
+poke top.enable_wide false
+poke top.load_wide false
+poke top.load_value_wide 0
+
+# The template leaves its power-on value open (`dontcare`), so the
+# very first thing we do is plant each counter with a known count.
+poke top.load_narrow true
+poke top.load_value_narrow 5
+poke top.load_wide true
+poke top.load_value_wide 100
+tick
+poke top.load_narrow false
+poke top.load_wide false
+assert top.narrow_count == 5
+assert top.wide_count == 100
+
+# --- Phase 1: the narrow counter starts counting. ---
+# Three enabled cycles, three steps. The wide instance shares the
+# same template but not the same enable: it stays asleep.
+poke top.enable_narrow true
+tick
+tick
+tick
+assert top.narrow_count == 8
+assert top.wide_count == 100
+
+# --- Phase 2: walk the narrow counter over its wrap. ---
+# Seven more enabled cycles land it exactly on 15, the last value a
+# 4-bit counter can hold.
+tick
+tick
+tick
+tick
+tick
+tick
+tick
+assert top.narrow_count == 15
+tick
+# The wrap: 15 plus 1 cannot stay in four bits, so the count folds
+# back to 0. An edge only the narrow instance ever reaches.
+assert top.narrow_count == 0
+tick
+assert top.narrow_count == 1
+
+# --- Phase 3: the wide counter climbs to its own wrap. ---
+# Loading is what makes the 4095 boundary reachable in a short test:
+# plant the wide counter three steps from the top and let it walk.
+poke top.enable_wide false
+poke top.load_wide true
+poke top.load_value_wide 4093
+tick
+poke top.load_wide false
+poke top.enable_wide true
+assert top.wide_count == 4093
+assert top.narrow_count == 2
+tick
+assert top.wide_count == 4094
+assert top.narrow_count == 3
+tick
+assert top.wide_count == 4095
+assert top.narrow_count == 4
+tick
+# The wide wrap: a 12-bit counter holds 4095 comfortably and only
+# now folds over. A 4-bit instance could never stand here.
+assert top.wide_count == 0
+assert top.narrow_count == 5
+tick
+assert top.wide_count == 1
+assert top.narrow_count == 6
+
+# --- Phase 4: both growing at once, neither disturbing the other. ---
+# The narrow one wraps once more along the way; the wide one sails
+# straight through the values that folded the narrow bed.
+tick
+tick
+tick
+tick
+tick
+tick
+tick
+tick
+assert top.narrow_count == 14
+assert top.wide_count == 9
+tick
+assert top.narrow_count == 15
+assert top.wide_count == 10
+tick
+assert top.narrow_count == 0
+assert top.wide_count == 11
+tick
+tick
+assert top.narrow_count == 2
+assert top.wide_count == 13
+
+# --- Phase 5: loading while enabled — the load wins. ---
+# When `load` and `enable` are both high, the count jumps rather
+# than increments. One template, one rule, honored at both widths.
+poke top.load_narrow true
+poke top.load_value_narrow 9
+tick
+assert top.narrow_count == 9
+assert top.wide_count == 14
+poke top.load_narrow false
+poke top.load_wide true
+poke top.load_value_wide 4000
+tick
+assert top.narrow_count == 10
+assert top.wide_count == 4000
+poke top.load_wide false
+tick
+assert top.narrow_count == 11
+assert top.wide_count == 4001
+
+exit

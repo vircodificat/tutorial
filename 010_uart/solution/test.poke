@@ -1,0 +1,182 @@
+top top::UartSender
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.send false
+poke top.data 0
+
+# --- An idle line rests high. ---
+assert top.tx == true
+tick
+assert top.tx == true
+
+# --- Send 0x0F: the whole frame, one bit period at a time. ---
+# One bit lasts 4 clock cycles, so the frame runs 40 cycles:
+# a low start bit, then 0x0F least significant bit first,
+# then a high stop bit.
+poke top.send true
+poke top.data 0x0F
+tick
+poke top.send false
+
+# The start bit pulls the line low for its whole period.
+assert top.tx == false
+tick
+assert top.tx == false
+tick
+assert top.tx == false
+tick
+assert top.tx == false
+
+# Now the eight data bits walk out, least significant first.
+# 0x0F is 0b00001111, so the wire reads 1,1,1,1,0,0,0,0.
+tick
+assert top.tx == true
+tick
+tick
+tick
+assert top.tx == true
+tick
+assert top.tx == true
+tick
+tick
+tick
+assert top.tx == true
+tick
+assert top.tx == true
+tick
+tick
+tick
+assert top.tx == true
+tick
+assert top.tx == true
+tick
+tick
+tick
+assert top.tx == true
+
+# --- A send while busy is quietly ignored. ---
+# Offer 0xFF in the middle of the frame; the transmitter is
+# busy until the stop bit is out, so the byte never loads.
+poke top.send true
+poke top.data 0xFF
+tick
+poke top.send false
+
+# The data bits keep marching, still 0x0F: low from here on.
+assert top.tx == false
+tick
+tick
+tick
+assert top.tx == false
+tick
+assert top.tx == false
+tick
+tick
+tick
+assert top.tx == false
+tick
+assert top.tx == false
+tick
+tick
+tick
+assert top.tx == false
+tick
+assert top.tx == false
+tick
+tick
+tick
+assert top.tx == false
+
+# The stop bit hands the line back, high for its whole period.
+tick
+assert top.tx == true
+tick
+tick
+tick
+assert top.tx == true
+
+# Idle again -- and no second frame may sneak in behind the
+# ignored send.
+tick
+assert top.tx == true
+tick
+assert top.tx == true
+
+# --- Send 0xA0: a second byte, chosen so bit order shows. ---
+# 0xA0 is 0b10100000, so the wire reads 0,0,0,0,0,1,0,1.
+poke top.send true
+poke top.data 0xA0
+tick
+poke top.send false
+
+# Start bit: low, first cycle and last.
+assert top.tx == false
+tick
+tick
+tick
+assert top.tx == false
+
+# Eight data bits, least significant first.
+tick
+assert top.tx == false
+tick
+tick
+tick
+assert top.tx == false
+tick
+assert top.tx == false
+tick
+tick
+tick
+assert top.tx == false
+tick
+assert top.tx == false
+tick
+tick
+tick
+assert top.tx == false
+tick
+assert top.tx == false
+tick
+tick
+tick
+assert top.tx == false
+tick
+assert top.tx == false
+tick
+tick
+tick
+assert top.tx == false
+tick
+assert top.tx == true
+tick
+tick
+tick
+assert top.tx == true
+tick
+assert top.tx == false
+tick
+tick
+tick
+assert top.tx == false
+tick
+assert top.tx == true
+tick
+tick
+tick
+assert top.tx == true
+
+# Stop bit, then the long quiet of an idle line.
+tick
+assert top.tx == true
+tick
+tick
+tick
+assert top.tx == true
+tick
+assert top.tx == true
+
+exit

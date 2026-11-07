@@ -1,0 +1,51 @@
+//! Write once, synthesize twice: one counter template, two widths.
+
+// The template lives in its own package and is marked `pub`, so it
+// can be planted from here; only `pub` items cross a package line.
+import counter
+
+//> `Top` plants two instances of the same generic counter side by
+//> side, at two different widths. Each distinct argument list becomes
+//> its own mono module — its own synthesized Verilog — while the
+//> template itself is written exactly once.
+pub mod Top {
+    incoming clock : Clock
+    incoming enable_narrow : Bit
+    incoming load_narrow : Bit
+    incoming load_value_narrow : Word[4]
+    incoming enable_wide : Bit
+    incoming load_wide : Bit
+    incoming load_value_wide : Word[12]
+
+    //> The narrow counter, a mod-16 bed that wraps every 16 cycles.
+    outgoing narrow_count : Word[4] {
+        it := narrow.count
+    }
+
+    //> The wide counter, with room to run all the way to 4095.
+    outgoing wide_count : Word[12] {
+        it := wide.count
+    }
+
+    // A generic mod is instantiated with its type arguments in square
+    // brackets, one argument per declared parameter, in order. The
+    // brackets are where each garden decides how wide to grow: same
+    // template, different widths, two separate mono modules.
+    // Distinct argument lists never share hardware — each instance
+    // gets its own copy of the template, grown to its own width.
+    mod narrow of counter::Counter[Word[4]] {
+        it.clock := clock
+        it.enable := enable_narrow
+        it.load := load_narrow
+        it.load_value := load_value_narrow
+        it.step := 1
+    }
+
+    mod wide of counter::Counter[Word[12]] {
+        it.clock := clock
+        it.enable := enable_wide
+        it.load := load_wide
+        it.load_value := load_value_wide
+        it.step := 1
+    }
+}

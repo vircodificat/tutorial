@@ -1,0 +1,5 @@
+[project]
+name = "021_structs"
+
+[prog]
+top = "top::PixelFader"

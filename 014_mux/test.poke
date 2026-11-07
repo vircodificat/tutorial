@@ -1,0 +1,62 @@
+top top::Mux4
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.a 0x10
+poke top.b 0x21
+poke top.c 0x42
+poke top.d 0x83
+
+# --- Walk sel across all four inputs. ---
+poke top.sel 0
+advance
+assert top.out == 0x10
+poke top.sel 1
+advance
+assert top.out == 0x21
+poke top.sel 2
+advance
+assert top.out == 0x42
+poke top.sel 3
+advance
+assert top.out == 0x83
+
+# --- Swap the data and re-select: sel and inputs together. ---
+poke top.a 0xAA
+poke top.b 0xBB
+poke top.c 0xCC
+poke top.d 0xDD
+poke top.sel 2
+advance
+assert top.out == 0xCC
+poke top.sel 0
+advance
+assert top.out == 0xAA
+poke top.sel 3
+advance
+assert top.out == 0xDD
+poke top.sel 1
+advance
+assert top.out == 0xBB
+
+# --- One more sweep, with fresh values. ---
+poke top.a 1
+poke top.b 2
+poke top.c 4
+poke top.d 8
+poke top.sel 1
+advance
+assert top.out == 2
+poke top.sel 3
+advance
+assert top.out == 8
+poke top.sel 0
+advance
+assert top.out == 1
+poke top.sel 2
+advance
+assert top.out == 4
+
+exit

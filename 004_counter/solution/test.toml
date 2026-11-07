@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial counter lesson: a loadable mod-5 counter with wrap-around."
+script = "test.poke"

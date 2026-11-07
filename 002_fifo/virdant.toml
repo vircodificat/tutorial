@@ -1,0 +1,5 @@
+[project]
+name = "002_fifo"
+
+[prog]
+top = "top::Fifo"

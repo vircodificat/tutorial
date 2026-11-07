@@ -1,0 +1,33 @@
+//> A two-flop synchronizer: the hardware idiom for safely bringing
+//> an asynchronous input into the clock domain with no metastability.
+pub mod Synchronizer {
+    incoming clock : Clock
+
+    // async_in comes from outside the clock domain -- it can change
+    // at any moment, without regard for clock edges.
+    incoming async_in : Bit
+
+    // First flop: samples the raw async input. If async_in changes
+    // right as the clock edge arrives, this register may land in a
+    // metastable state -- neither a clean 0 nor a clean 1 -- for a
+    // brief, unpredictable moment. We keep that uncertainty here and
+    // never let it escape to the rest of the design.
+    reg sync_a : Bit {
+        initial it <= false
+        it <= async_in
+    }
+
+    // Second flop: samples sync_a after a full clock cycle has passed.
+    // Metastability fades exponentially; by this edge, sync_a has had
+    // ample time to settle. sync_b's output is safe to trust.
+    reg sync_b : Bit {
+        initial it <= false
+        it <= sync_a
+    }
+
+    // The clean, synchronised output. Any change in async_in appears
+    // here exactly two clock cycles later.
+    outgoing synced : Bit {
+        it := sync_a // BUG: this taps the first flop -- the one that may still be settling.
+    }
+}

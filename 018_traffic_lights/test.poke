@@ -1,0 +1,180 @@
+top top::TrafficLight
+vcd trace.vcd
+
+# Nothing here needs pinning: the only input is the clock, and the
+# lights march on their own. Each `tick` is one full cycle of the
+# controller's clock, and each `advance` settles the lights after
+# the edge. One full trip around the controller is:
+#   NS green (4 cycles) -> NS yellow (2) -> EW green (4) -> EW yellow (2)
+# ...and around again. This test rides two full trips.
+
+# --- A fresh controller starts on the north-south green. ---
+assert top.ns_green == true
+assert top.ns_yellow == false
+assert top.ns_red == false
+assert top.ew_green == false
+assert top.ew_yellow == false
+assert top.ew_red == true
+assert top.timer == 3
+
+# --- Safety invariant: the two roads never share the intersection. ---
+assert !(top.ns_green && top.ew_green)
+assert !(top.ns_yellow && top.ew_yellow)
+
+# ============ First trip around the intersection. ============
+
+# --- The north-south green holds its full four cycles. ---
+tick
+advance
+assert top.ns_green == true
+assert top.timer == 2
+
+tick
+advance
+assert top.ns_green == true
+assert top.timer == 1
+
+tick
+advance
+assert top.ns_green == true
+assert top.timer == 0
+
+# --- Then the yellow, for the north-south road only. ---
+tick
+advance
+assert top.ns_green == false
+assert top.ns_yellow == true
+assert top.ns_red == false
+assert top.ew_green == false
+assert top.ew_yellow == false
+assert top.ew_red == true
+assert top.timer == 1
+
+# --- The yellow holds its full two cycles. ---
+tick
+advance
+assert top.ns_yellow == true
+assert top.timer == 0
+
+# --- Now the east-west road takes its turn on green. ---
+tick
+advance
+assert top.ns_green == false
+assert top.ns_yellow == false
+assert top.ns_red == true
+assert top.ew_green == true
+assert top.ew_yellow == false
+assert top.ew_red == false
+assert top.timer == 3
+
+# --- Exactly one green lights the map, as it must. ---
+assert (top.ns_green && !top.ew_green) || (!top.ns_green && top.ew_green)
+
+# --- The east-west green holds its full four cycles. ---
+tick
+advance
+assert top.ew_green == true
+assert top.timer == 2
+
+tick
+advance
+assert top.ew_green == true
+assert top.timer == 1
+
+tick
+advance
+assert top.ew_green == true
+assert top.timer == 0
+
+# --- The east-west yellow, two cycles, red waiting on the other road. ---
+tick
+advance
+assert top.ns_yellow == false
+assert top.ns_red == true
+assert top.ew_green == false
+assert top.ew_yellow == true
+assert top.ew_red == false
+assert top.timer == 1
+
+tick
+advance
+assert top.ew_yellow == true
+assert top.timer == 0
+
+# ============ Second trip: the loop must keep going. ============
+
+# --- Back on the north-south green, as the yellow ends. ---
+tick
+advance
+assert top.ns_green == true
+assert top.ns_yellow == false
+assert top.ew_yellow == false
+assert top.ew_red == true
+assert top.timer == 3
+
+# --- The second trip's yellow, brief as the first. ---
+tick
+advance
+assert top.ns_green == true
+assert top.timer == 2
+
+tick
+advance
+assert top.ns_green == true
+assert top.timer == 1
+
+tick
+advance
+assert top.ns_green == true
+assert top.timer == 0
+
+tick
+advance
+assert top.ns_yellow == true
+assert top.ew_red == true
+assert top.timer == 1
+
+tick
+advance
+assert top.ns_yellow == true
+assert top.timer == 0
+
+# --- The east-west road gets its green again. ---
+tick
+advance
+assert top.ns_red == true
+assert top.ew_green == true
+assert top.timer == 3
+
+# --- Safety invariant, checked once more mid-trip. ---
+assert !(top.ns_green && top.ew_green)
+assert !(top.ns_yellow && top.ew_yellow)
+assert (top.ns_green && !top.ew_green) || (!top.ns_green && top.ew_green)
+
+tick
+advance
+assert top.ew_green == true
+assert top.timer == 2
+
+tick
+advance
+assert top.ew_green == true
+assert top.timer == 1
+
+tick
+advance
+assert top.ew_green == true
+assert top.timer == 0
+
+tick
+advance
+assert top.ew_yellow == true
+assert top.ew_green == false
+assert top.timer == 1
+
+tick
+advance
+assert top.ew_yellow == true
+assert top.timer == 0
+
+exit

@@ -1,0 +1,44 @@
+//! A tiny ROM: sixteen bytes of constant data, looked up by address.
+
+//> `HexAsciiRom` turns one hex nibble into the ASCII code of the
+//> character that prints it — the little table behind every memory
+//> dump and hex display ever debugged.
+pub mod HexAsciiRom {
+    // The address: which of the sixteen bytes to read out.
+    incoming nibble : Word[4]
+
+    // A ROM owns no registers and hears no clock. Its data is
+    // constant, baked into the wiring, so the answer is ready the
+    // very moment the address arrives — nothing waits for an edge.
+    outgoing ascii : Word[8] dependson nibble {
+        // The whole memory is this one table: sixteen constant
+        // arms, covering every value a Word[4] can hold. You could
+        // compute the same answers with arithmetic (`nibble` plus
+        // one of two offsets), but the synthesizer loves a table:
+        // it grows the lookup into plain wiring, no adders, no
+        // logic to speak of — just sixteen labeled rows.
+        it := match nibble {
+            // '0' through '9' live together at ASCII 0x30 and up,
+            // so the first ten rows are one tidy neighborhood.
+            with 0x0 => 0x30
+            with 0x1 => 0x31
+            with 0x2 => 0x32
+            with 0x3 => 0x33
+            with 0x4 => 0x34
+            with 0x5 => 0x35
+            with 0x6 => 0x36
+            with 0x7 => 0x37
+            with 0x8 => 0x38
+            with 0x9 => 0x39
+            // Then the gap: after '9' (0x39) the letters begin,
+            // and 'A' sits at 0x41. The table feels no seam —
+            // every character simply has its own row.
+            with 0xA => 0x41
+            with 0xB => 0x42
+            with 0xC => 0x43
+            with 0xD => 0x44
+            with 0xE => 0x45
+            with 0xF => 0x46
+        }
+    }
+}

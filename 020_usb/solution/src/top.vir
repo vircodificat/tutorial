@@ -1,0 +1,133 @@
+//! USB line encoding: NRZI and bit stuffing, one layer of the cake.
+
+//> `UsbEncoder` is the PHY-flavored slice of USB: it takes bytes and
+//> puts their bits on the wire the way a real USB transmitter would.
+//> A whole USB stack is a very tall cake; this is just the bottom
+//> layer — how the bits actually look on the wire.
+pub mod UsbEncoder {
+    incoming clock : Clock
+
+    // One byte per `send`, least significant bit first, as USB does.
+    incoming data : Word[8]
+    incoming send : Bit
+
+    // The wire never carries a data bit: it carries a level, which
+    // changes only when the data says so.
+    outgoing usb_bit : Bit {
+        it := last_level
+    }
+
+    // USB idles high (the J state), so power-on leaves the line high.
+    reg last_level : Bit {
+        initial it <= true
+    }
+
+    // A new byte is accepted only while the line is idle.
+    reg busy : Bit {
+        initial it <= false
+    }
+
+    // Each output bit lasts two clock cycles: `phase` walks 0, 1,
+    // 0, 1..., and the bit edge fires whenever it reads 1.
+    reg phase : Word[1] {
+        initial it <= 0
+    }
+
+    // The byte being sent; each bit edge consumes the LSB of `shift`.
+    reg shift : Word[8] {
+        initial it <= 0
+    }
+
+    reg bit_index : Word[4] {
+        initial it <= 0
+    }
+
+    // NRZI rule: a 0 toggles the line, a 1 holds it. The receiver
+    // rebuilds its clock from those edges, so six 1s in a row would
+    // leave the wire too quiet. So after six consecutive 1s the
+    // transmitter slips in a stuffed 0 — a guaranteed edge before
+    // the next real bit. (`ones_run` counts within a byte; a real
+    // USB transmitter keeps counting across bytes.)
+    reg ones_run : Word[3] {
+        initial it <= 0
+    }
+
+    reg stuffed_pending : Bit {
+        initial it <= false
+    }
+
+    // The data bit on deck, and whether sending it makes six 1s in
+    // a row — the moment a stuffed 0 gets scheduled right after.
+    wire data_bit : Bit {
+        it := shift[0]
+    }
+
+    wire run_six : Bit {
+        it := data_bit && ones_run == 5
+    }
+
+    // One statement-level `if` moves every register together.
+    if {
+        // Idle and asked to send: latch the byte, start the clock.
+        when send && !busy {
+            busy <= true
+            shift <= data
+            bit_index <= 0
+            ones_run <= 0
+            stuffed_pending <= false
+            phase <= 1
+        }
+        // The bit edge: once every two cycles while sending.
+        when busy && phase == 1 {
+            phase <= 0
+            if {
+                // A stuffed 0 is a real 0 to NRZI: it toggles the
+                // line, handing the receiver a guaranteed edge.
+                when stuffed_pending {
+                    last_level <= !last_level
+                    stuffed_pending <= false
+                    if {
+                        when bit_index == 8 {
+                            busy <= false
+                        }
+                    }
+                }
+                else {
+                    shift <= word(0w1, shift[8..1])
+                    bit_index <= bit_index + 1
+                    if {
+                        // A data 0: toggle; any run of 1s is over.
+                        when !data_bit {
+                            last_level <= !last_level
+                            ones_run <= 0
+                            if {
+                                when bit_index == 7 {
+                                    busy <= false
+                                }
+                            }
+                        }
+                        // A data 1: hold the level, count the run.
+                        when data_bit && !run_six {
+                            ones_run <= ones_run + 1
+                            if {
+                                when bit_index == 7 {
+                                    busy <= false
+                                }
+                            }
+                        }
+                        // Sixth consecutive 1: hold, and owe a
+                        // stuffed 0 for the very next bit period.
+                        when run_six {
+                            ones_run <= 0
+                            stuffed_pending <= true
+                        }
+                    }
+                }
+            }
+        }
+        // The quiet half of the bit period: walk toward the edge.
+        when busy && phase == 0 {
+            phase <= 1
+        }
+    }
+}

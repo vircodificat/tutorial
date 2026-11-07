@@ -1,0 +1,178 @@
+//! A tiny Wishbone-style bus: one master, one memory, one handshake.
+
+//> `Wishbone` gathers every signal a byte-wide bus needs into one
+//> socket, so the whole bus can be named -- and connected -- as a
+//> single thing. `cosi` (Client-Out, Server-In) marks the request
+//> channels the client drives; `soci` (Server-Out, Client-In) marks
+//> the response channels the server drives.
+socket Wishbone {
+    cosi addr : Word[8]
+    cosi write : Bit
+    cosi wdata : Word[8]
+    cosi strobe : Bit
+    soci ack : Bit dependson strobe
+    soci rdata : Word[8]
+}
+
+//> `MemSlave` is the server side of the bus: four bytes of memory
+//> behind one socket. It answers a strobe in the same cycle it
+//> arrives, and reads are combinational -- no clock required.
+mod MemSlave {
+    incoming clock : Clock
+
+    server socket wishbone of Wishbone {
+        // The heartbeat of any bus: `strobe` in, `ack` out. A client
+        // that never hears `ack` would wait forever.
+        it.ack := it.strobe
+        it.rdata := match it.addr[2..0] {
+            with 0 => cell0
+            with 1 => cell1
+            with 2 => cell2
+            with 3 => cell3
+        }
+    }
+
+    // Four one-byte cells; `addr[2..0]` says which one a write lands in.
+    reg cell0 : Word[8] {
+        initial it <= 0
+        if {
+            when wishbone.write && wishbone.strobe && wishbone.addr[2..0] == 0 {
+                it <= wishbone.wdata
+            }
+        }
+    }
+
+    reg cell1 : Word[8] {
+        initial it <= 0
+        if {
+            when wishbone.write && wishbone.strobe && wishbone.addr[2..0] == 1 {
+                it <= wishbone.wdata
+            }
+        }
+    }
+
+    reg cell2 : Word[8] {
+        initial it <= 0
+        if {
+            when wishbone.write && wishbone.strobe && wishbone.addr[2..0] == 2 {
+                it <= wishbone.wdata
+            }
+        }
+    }
+
+    reg cell3 : Word[8] {
+        initial it <= 0
+        if {
+            when wishbone.write && wishbone.strobe && wishbone.addr[2..0] == 3 {
+                it <= wishbone.wdata
+            }
+        }
+    }
+}
+
+//> `BusMaster` is the client side of the bus. It runs a five-step
+//> program -- wait for `go`, write two bytes, read them both back --
+//> one transaction per cycle, never moving on without `ack`.
+mod BusMaster {
+    incoming clock : Clock
+    incoming go : Bit
+
+    // The program counter: step 0 waits for `go`, steps 1 through 4
+    // are one bus transaction each, step 5 is the end. The advance
+    // arm demands `wishbone.ack`, so a bus that never answers leaves
+    // the master standing right here.
+    reg step : Word[3] {
+        initial it <= 0
+        if {
+            when step == 0 && go {
+                it <= 1
+            }
+            when busy && wishbone.ack {
+                it <= it + 1
+            }
+        }
+    }
+
+    // `busy` is steps 1 through 4: exactly when the strobe is held high.
+    wire busy : Bit {
+        it := step != 0 && step != 5
+    }
+
+    client socket wishbone of Wishbone {
+        it.addr := addr
+        it.write := write
+        it.wdata := wdata
+        it.strobe := busy
+    }
+
+    // Steps 1 and 2 write; steps 3 and 4 read the same addresses back.
+    wire write : Bit {
+        it := step == 1 || step == 2
+    }
+
+    wire addr : Word[8] {
+        it := match step {
+            with 1 => 0
+            with 2 => 1
+            with 3 => 0
+            with 4 => 1
+            else => 0
+        }
+    }
+
+    wire wdata : Word[8] {
+        it := match step {
+            with 1 => 0xA1
+            with 2 => 0xB2
+            else => 0
+        }
+    }
+
+    // A read transfer: a strobe, acknowledged, that is not a write.
+    reg captured : Word[8] {
+        initial it <= 0
+        if {
+            when busy && wishbone.ack && !write {
+                it <= wishbone.rdata
+            }
+        }
+    }
+
+    outgoing readback : Word[8] {
+        it := captured
+    }
+
+    outgoing progress : Word[3] {
+        it := step
+    }
+
+    outgoing done : Bit {
+        it := step == 5
+    }
+}
+
+//> `Top` plugs the master into the memory. Connecting two sockets of
+//> the same kind is a single `:=:` -- every channel crosses at once,
+//> each in its own direction.
+pub mod Top {
+    incoming clock : Clock {
+        master.clock := it
+        slave.clock := it
+    }
+
+    incoming go : Bit
+
+    mod master of BusMaster {
+        it.go := go
+    }
+
+    mod slave of MemSlave
+
+    outgoing readback : Word[8]
+    outgoing progress : Word[3]
+    outgoing done : Bit
+
+    readback := master.readback
+    progress := master.progress
+    done := master.done
+}

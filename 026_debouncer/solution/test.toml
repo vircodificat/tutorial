@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial debouncer lesson: only a change that holds still is believed."
+script = "test.poke"

@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial buffer lesson: capture a byte on clock edges and hold it."
+script = "test.poke"

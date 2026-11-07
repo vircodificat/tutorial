@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial match lesson: an ALU whose result and flags are decided by match."
+script = "test.poke"

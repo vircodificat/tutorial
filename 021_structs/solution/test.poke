@@ -1,0 +1,102 @@
+top top::PixelFader
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.red 0
+poke top.green 0
+poke top.blue 0
+poke top.load false
+poke top.fade false
+
+# Power-on: the canvas starts black, every channel at 0.
+assert top.current_red == 0
+assert top.current_green == 0
+assert top.current_blue == 0
+
+# --- Load a ripening tomato: red 6, green 2, blue 0. ---
+# Three separate wires arrive at the boundary and are bundled
+# into one Pixel; the canvas should latch the whole thing at
+# once, in a single cycle.
+poke top.red 6
+poke top.green 2
+poke top.blue 0
+poke top.load true
+tick
+poke top.load false
+assert top.current_red == 6
+assert top.current_green == 2
+assert top.current_blue == 0
+
+# --- Fade it toward black, one shade per tick. ---
+# Every channel steps down together, once per tick. Green runs
+# out after two steps and must park at 0, not wrap around into
+# a blaze of 255; blue was born black and must stay black.
+poke top.fade true
+tick
+assert top.current_red == 5
+assert top.current_green == 1
+assert top.current_blue == 0
+tick
+assert top.current_red == 4
+assert top.current_green == 0
+assert top.current_blue == 0
+tick
+assert top.current_red == 3
+assert top.current_green == 0
+assert top.current_blue == 0
+tick
+assert top.current_red == 2
+tick
+assert top.current_red == 1
+tick
+assert top.current_red == 0
+# Black is a fixed point: two more fade steps must change nothing.
+tick
+tick
+assert top.current_red == 0
+assert top.current_green == 0
+assert top.current_blue == 0
+
+# --- Reload mid-fade: a fresh pixel lands in a single cycle. ---
+# `load` wins the cycle it arrives in, even while `fade` is held
+# high, and all three channels land together.
+poke top.red 10
+poke top.green 10
+poke top.blue 10
+poke top.load true
+tick
+poke top.load false
+assert top.current_red == 10
+assert top.current_green == 10
+assert top.current_blue == 10
+
+# --- The fresh pixel fades too, all three channels in step. ---
+tick
+assert top.current_red == 9
+assert top.current_green == 9
+assert top.current_blue == 9
+tick 3
+assert top.current_red == 6
+assert top.current_green == 6
+assert top.current_blue == 6
+
+# --- Load black while the fade is still held high. ---
+# Black is where every fade ends: loading it must park the
+# canvas there, and fading it must leave it there.
+poke top.red 0
+poke top.green 0
+poke top.blue 0
+poke top.load true
+tick
+poke top.load false
+assert top.current_red == 0
+assert top.current_green == 0
+assert top.current_blue == 0
+tick
+assert top.current_red == 0
+assert top.current_green == 0
+assert top.current_blue == 0
+
+exit

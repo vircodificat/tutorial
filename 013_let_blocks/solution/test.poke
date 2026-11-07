@@ -1,0 +1,110 @@
+top top::Averager
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.a 0
+poke top.b 0
+
+# --- Two empty baskets: total 0, nothing carried, average 0. ---
+advance
+assert top.total == 0
+assert top.carried == false
+assert top.average == 0
+
+# --- A small odd sum: the average rounds 7.5 up to 8. ---
+poke top.a 7
+poke top.b 8
+advance
+assert top.total == 15
+assert top.carried == false
+assert top.average == 8
+
+# --- 0 + max: the sum fits in one byte after all. ---
+poke top.a 0
+poke top.b 255
+advance
+assert top.total == 255
+assert top.carried == false
+assert top.average == 128
+
+# --- max + max: total 510, the carry bit finally sets. ---
+poke top.a 255
+poke top.b 255
+advance
+assert top.total == 510
+assert top.carried == true
+assert top.average == 255
+
+# --- A sum one below the byte boundary. ---
+poke top.a 128
+poke top.b 127
+advance
+assert top.total == 255
+assert top.carried == false
+assert top.average == 128
+
+# --- A plain even sum: the average is exact. ---
+poke top.a 100
+poke top.b 55
+advance
+assert top.total == 155
+assert top.carried == false
+assert top.average == 78
+
+# --- Past the boundary: 300 needs the ninth bit. ---
+poke top.a 200
+poke top.b 100
+advance
+assert top.total == 300
+assert top.carried == true
+assert top.average == 150
+
+# --- The same sum, baskets swapped. ---
+poke top.a 0
+poke top.b 255
+advance
+assert top.total == 255
+assert top.carried == false
+assert top.average == 128
+
+poke top.a 255
+poke top.b 0
+advance
+assert top.total == 255
+assert top.carried == false
+assert top.average == 128
+
+# --- Tiny sums: rounding up is easy to check by hand. ---
+poke top.a 1
+poke top.b 2
+advance
+assert top.total == 3
+assert top.carried == false
+assert top.average == 2
+
+poke top.a 3
+poke top.b 4
+advance
+assert top.total == 7
+assert top.carried == false
+assert top.average == 4
+
+# --- Just past the boundary: 257, average exactly 129. ---
+poke top.a 129
+poke top.b 128
+advance
+assert top.total == 257
+assert top.carried == true
+assert top.average == 129
+
+# --- An exact power of two, riding the carry bit. ---
+poke top.a 255
+poke top.b 1
+advance
+assert top.total == 256
+assert top.carried == true
+assert top.average == 128
+
+exit

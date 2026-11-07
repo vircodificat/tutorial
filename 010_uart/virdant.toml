@@ -1,0 +1,5 @@
+[project]
+name = "010_uart"
+
+[prog]
+top = "top::UartSender"

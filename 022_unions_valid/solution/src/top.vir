@@ -1,0 +1,74 @@
+//! A greenhouse bench where two sensors share one wire that only
+//! sometimes has something to say.
+
+//> A `Reading` is one packet from the greenhouse sensors, and the
+//> union says which sensor spoke: `Moisture` carries a soil
+//> percentage, `Temperature` carries whole degrees, and exactly one
+//> arm of the union is live at a time.
+pub union type Reading {
+    Moisture(percent : Word[7])
+    Temperature(celsius : Word[8])
+}
+
+//> `GreenhouseMonitor` watches the sensors' channel and keeps the
+//> most recent reading of each kind on its own shelf.
+pub mod GreenhouseMonitor {
+    incoming clock : Clock
+
+    // The sensors' shared channel. There is no null pointer and no
+    // sentinel value here: "no data" is just the @Invalid() arm of
+    // a Valid, and when data is present it is a whole `Reading`.
+    incoming reading : Valid[Reading]
+
+    // The last moisture reading seen. @Invalid() until the first
+    // one arrives: an empty shelf, not a reading of zero percent.
+    outgoing latest_moisture : Valid[Word[7]] {
+        it := moisture
+    }
+
+    // The last temperature reading seen, same story.
+    outgoing latest_temperature : Valid[Word[8]] {
+        it := temperature
+    }
+
+    // High on exactly the cycles where the channel is carrying
+    // something, either kind. The pattern @Valid(_) asks only "is
+    // there data?" — the _ discards the payload.
+    outgoing fresh : Bit dependson reading {
+        it := match reading {
+            with @Valid(_) => true
+            with @Invalid() => false
+        }
+    }
+
+    // Power-on: nothing has been measured yet, so both shelves
+    // start empty. `initial` is how a register says so.
+    reg moisture : Valid[Word[7]] {
+        initial it <= @Invalid()
+        match reading {
+            // Fires only when the channel carries a moisture
+            // reading, and the pattern binds `p` to the percent.
+            with @Valid(@Moisture(p)) {
+                it <= @Valid(p)
+            }
+            else {
+                // A temperature, or nothing at all: this register
+                // is left undriven, and an undriven register simply
+                // holds. @Invalid() is not a moisture reading of
+                // zero — never store the emptiness itself.
+            }
+        }
+    }
+
+    reg temperature : Valid[Word[8]] {
+        initial it <= @Invalid()
+        match reading {
+            with @Valid(@Temperature(t)) {
+                it <= @Valid(t)
+            }
+            else {
+                // Same courtesy in reverse: moisture cycles never touch this shelf.
+            }
+        }
+    }
+}

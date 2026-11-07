@@ -1,0 +1,56 @@
+//! The platform lesson: a design bound to a board.
+
+import virt
+import greeter
+
+//> `Top` is the whole program.  It binds to the virtual board,
+//> prints a short greeting over the UART, and asks the board to
+//> exit.
+pub mod Top for virt::Virt {
+    // A platform is a board written down as data: which ports it
+    // has, which way each one faces, what type each one carries.
+    // Writing `for virt::Virt` binds this module to that board,
+    // and from then on `vir check` insists the port list below
+    // matches the board exactly -- same names, same directions,
+    // same types, nothing extra, nothing missing.
+    incoming clock : Clock
+
+    // These two arrive on real pins of the board, but this
+    // program never listens to either.  A port without a
+    // platform default cannot simply be dropped, so both must be
+    // declared -- and `unused` says the silence is on purpose.
+    incoming rx : Bit
+    incoming spi_miso : Bit
+
+    // The board also wires out an SPI flash, but the platform
+    // gives those pins `default` values, so a design that never
+    // touches the flash may leave those ports out entirely: the
+    // board fills them in on its own.
+
+    //> The UART line to the host, where the greeting goes.
+    outgoing tx : Bit {
+        it := greeter.tx
+    }
+
+    //> The way a design tells the board it is finished:
+    //> `@Valid(0)` ends the run with exit code 0.
+    outgoing exit : Valid[Word[8]] {
+        it := mux(greeter.done, @Valid(0), @Invalid())
+    }
+
+    // Every port above belongs to the board. A module bound to a
+    // platform speaks only of the board's own pins: `vir check`
+    // compares the two lists port by port, and anything the board
+    // does not declare is refused at the gate.
+    // BUG: this port is not on the platform.
+    outgoing led : Bit {
+        it := false
+    }
+
+    unused rx
+    unused spi_miso
+
+    mod greeter of greeter::Greeter {
+        it.clock := clock
+    }
+}

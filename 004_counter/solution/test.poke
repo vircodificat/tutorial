@@ -1,0 +1,78 @@
+top top::ModCounter
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.load false
+poke top.load_data 0
+
+# --- Power-on: count starts at zero. ---
+advance
+assert top.value == 0
+assert top.at_limit == false
+
+# --- Load a starting value of 3. ---
+poke top.load true
+poke top.load_data 3
+tick
+poke top.load false
+advance
+assert top.value == 3
+assert top.at_limit == false
+
+# --- Free-run from 3 through the full mod-5 wrap cycle. ---
+# 3 -> 4
+tick
+advance
+assert top.value == 4
+assert top.at_limit == false
+
+# 4 -> 5: the limit value is visible for exactly one cycle.
+tick
+advance
+assert top.value == 5
+assert top.at_limit == true
+
+# 5 -> 0: the counter wraps on the following edge.
+tick
+advance
+assert top.value == 0
+assert top.at_limit == false
+
+# Keep counting through the second half of the cycle.
+tick
+advance
+assert top.value == 1
+
+tick
+advance
+assert top.value == 2
+
+tick
+advance
+assert top.value == 3
+
+tick
+advance
+assert top.value == 4
+
+# Second time at the limit: same one-cycle pulse.
+tick
+advance
+assert top.value == 5
+assert top.at_limit == true
+
+tick
+advance
+assert top.value == 0
+
+# --- Load overrides the count midstream. ---
+poke top.load true
+poke top.load_data 2
+tick
+poke top.load false
+advance
+assert top.value == 2
+
+exit

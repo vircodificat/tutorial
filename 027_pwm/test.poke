@@ -1,0 +1,88 @@
+top top::Pwm
+vcd trace.vcd
+
+# Pin the knob down before the lamp warms up. Everything below
+# rides on one fact: after N ticks, the sweep reads N mod 256,
+# and the LED is lit exactly while the sweep is below the knob.
+
+poke top.brightness 0
+
+# --- Knob at 0: the night side. ---
+# 0/256 duty. Dark at power-on, dark through the sweep, dark at
+# the top of the range, dark again after the wrap. Note the very
+# first assert: the LED is dark even while the sweep sits at 0,
+# because the knob owns that count too.
+advance
+assert top.led == false
+tick
+assert top.led == false
+tick
+assert top.led == false
+tick 122
+assert top.led == false
+tick 130
+assert top.led == false
+tick
+assert top.led == false
+tick
+assert top.led == false
+
+# --- Knob at 128: the half-and-half sweep. ---
+# The heart of the lesson. The pin rides high for the first half
+# of the sweep and low for the second, then turns bright again
+# the moment the sweep wraps — exactly one full period later.
+poke top.brightness 128
+assert top.led == true
+tick
+assert top.led == true
+tick 126
+assert top.led == true
+tick
+assert top.led == false
+tick 127
+assert top.led == false
+tick
+assert top.led == true
+
+# --- Knob at 255: high summer. ---
+# 255/256 duty. Lit everywhere except the single count where the
+# sweep reaches the top of its range and the compare finally
+# lets go — one dark tick in 256.
+poke top.brightness 255
+assert top.led == true
+tick
+assert top.led == true
+tick 124
+assert top.led == true
+tick 129
+assert top.led == true
+tick
+assert top.led == false
+tick
+assert top.led == true
+
+# --- Turn the knob mid-sweep. ---
+# The compare is live wiring, not a latched setting: poke the knob
+# down and the pin drops at once, mid-period, mid-breath.
+poke top.brightness 64
+assert top.led == true
+tick 10
+assert top.led == true
+poke top.brightness 0
+assert top.led == false
+tick 5
+assert top.led == false
+poke top.brightness 255
+assert top.led == true
+tick 5
+assert top.led == true
+poke top.brightness 100
+assert top.led == true
+tick 80
+assert top.led == false
+tick 155
+assert top.led == false
+tick
+assert top.led == true
+
+exit

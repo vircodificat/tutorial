@@ -1,0 +1,80 @@
+top top::EdgeDetector
+vcd trace.vcd
+
+# Pin the button low and give the design two quiet cycles.
+# Registers wake from power-on holding whatever the ether handed
+# them; the first clock edges are what plant everything on solid
+# ground.
+poke top.button false
+tick
+tick
+
+# Settled: button up, no pulse, nothing counted.
+assert top.pulse == false
+assert top.press_count == 0
+
+# --- First press. ---
+# The pulse does not wait for the clock to notice: it rises the
+# moment the button does.
+poke top.button true
+advance
+assert top.pulse == true
+
+# One clock edge later, the pulse is gone -- and the button is
+# still down. One cycle is the whole contract.
+tick
+assert top.pulse == false
+
+# Hold the button three more cycles: still quiet. A press is an
+# event, not a level.
+tick
+tick
+tick
+assert top.pulse == false
+assert top.press_count == 1
+
+# --- Release. ---
+# Letting go is not a press. A detector that pulsed here would be
+# watching both edges, and the button only asked for one.
+poke top.button false
+advance
+assert top.pulse == false
+tick
+assert top.press_count == 1
+
+# --- Second press, same rules. ---
+poke top.button true
+advance
+assert top.pulse == true
+tick
+assert top.pulse == false
+assert top.press_count == 2
+
+# --- A brisk burst: three quick taps, one cycle of contact apiece. ---
+# Even at one tick per tap, each fresh press earns exactly one pulse
+# and one count.
+poke top.button false
+tick
+poke top.button true
+tick
+assert top.press_count == 3
+poke top.button false
+tick
+poke top.button true
+tick
+assert top.press_count == 4
+poke top.button false
+tick
+poke top.button true
+tick
+assert top.press_count == 5
+
+# Everything settles: button released, pulse quiet, five presses
+# standing in the ledger.
+poke top.button false
+advance
+assert top.pulse == false
+tick
+assert top.press_count == 5
+
+exit

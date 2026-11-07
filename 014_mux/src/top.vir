@@ -1,0 +1,43 @@
+//! A 4:1 multiplexer, grown from two 2:1 multiplexers.
+
+//> `Mux4` is a 4:1 multiplexer: four data inputs, one two-bit
+//> `sel`, and `out` shows whichever input `sel` points at.
+pub mod Mux4 {
+    incoming a : Word[8]
+    incoming b : Word[8]
+    incoming c : Word[8]
+    incoming d : Word[8]
+    incoming sel : Word[2]
+
+    // A multiplexer -- a mux -- is just an answer chosen by a
+    // question. The question here is `sel[0]`, one bit, true or
+    // false: when it is set, `b` takes the seat instead of `a`.
+    // This conditional sits in EXPRESSION position: it appears
+    // on the right of `:=`, and each arm produces a value with
+    // `=>`. In statement position arms are drivers with `{`.
+    wire lower_pair : Word[8] {
+        it := if {
+            // BUG: this line is wrong.
+            when sel[0] => a
+            else => b
+        }
+    }
+
+    // The same question, asked again for the other two inputs.
+    wire upper_pair : Word[8] {
+        it := if {
+            when sel[0] => d
+            else => c
+        }
+    }
+
+    // The outer question is `sel[1]`: which pair gets served?
+    // A `match` expression answers it, one arm per value, each
+    // arm producing the value that flows out.
+    outgoing out : Word[8] dependson a, b, c, d, sel {
+        it := match sel[1] {
+            with false => lower_pair
+            with true => upper_pair
+        }
+    }
+}

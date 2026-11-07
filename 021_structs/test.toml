@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial structs lesson: bundle RGB channels into a Pixel and fade it toward black."
+script = "test.poke"

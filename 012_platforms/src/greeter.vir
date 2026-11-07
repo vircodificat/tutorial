@@ -1,0 +1,102 @@
+//! A tiny UART greeter: streams `Hi!\r\n` out of `tx`, then raises
+//! `done`.
+
+//> One step of the sender's day.  Each state carries the countdown
+//> (`pulse`) to the next step, so the line holds each bit for a
+//> fixed stretch of clock cycles.
+//>
+//> `Boot(count)` - hold the line idle while the board wakes up.
+//> `Start(char, pulse)` - pull the line low to announce a byte.
+//> `Data(char, bit, pulse)` - send data bit `bit` of `char`.
+//> `Stop(char, pulse)` - raise the line high to close the byte.
+//> `Done()` - the whole message is out.
+union type SenderState {
+    Boot(count : Word[8])
+    Start(char : Word[3], pulse : Word[4])
+    Data(char : Word[3], bit : Word[3], pulse : Word[4])
+    Stop(char : Word[3], pulse : Word[4])
+    Done()
+}
+
+//> Streams the message `Hi!\r\n` out of the UART, one bit at a
+//> time, then raises `done` once the last stop bit has finished.
+pub mod Greeter {
+    incoming clock : Clock
+
+    //> The UART line: idle high, a low start bit, eight data bits
+    //> least-significant first, then a high stop bit.
+    outgoing tx : Bit {
+        it := tx_level
+    }
+
+    //> True once every character of the message has been sent.
+    outgoing done : Bit {
+        it := match state : SenderState {
+            with @Done() => true
+            else => false
+        }
+    }
+
+    // The sender lives one bit period at a time: every state
+    // carries a `pulse` countdown from 8, which gives each bit
+    // nine clock cycles on the board's 1 MHz clock.  The board
+    // times bits by watching the line, so the count only has to
+    // be comfortable, not exact.
+    reg state : SenderState {
+        initial it <= @Boot(0)
+        it <= match it : SenderState {
+            with @Boot(count) if {
+                when count == 255 => @Start(0, 8)
+                else => @Boot(count + 1)
+            }
+            with @Start(char, pulse) if {
+                when pulse == 0 => @Data(char, 0, 8)
+                else => @Start(char, pulse - 1)
+            }
+            with @Data(char, bit, pulse) if {
+                when pulse > 0 => @Data(char, bit, pulse - 1)
+                when bit == 7 => @Stop(char, 8)
+                else => @Data(char, bit + 1, 8)
+            }
+            with @Stop(char, pulse) if {
+                when pulse == 0 if {
+                    when char == 4 => @Done()
+                    else => @Start(char + 1, 8)
+                }
+                else => @Stop(char, pulse - 1)
+            }
+            with @Done() => @Done()
+        }
+    }
+
+    // The line level reads straight off the state: low for a
+    // start bit, one data bit at a time, high the rest of the
+    // day.
+    wire tx_level : Bit {
+        it := match state : SenderState {
+            with @Boot(count) => true
+            with @Start(char, pulse) => false
+            with @Data(char, bit, pulse) => char_rom[dyn bit]
+            with @Stop(char, pulse) => true
+            with @Done() => true
+        }
+    }
+
+    // Five characters, one row each.  UART carries a byte
+    // least-significant first, so `dyn bit` picks the bits off
+    // from the right.  Values past the end never happen: the
+    // state machine stops asking at `char == 4`.
+    wire char_rom : Word[8] {
+        it := match state : SenderState {
+            with @Data(char, bit, pulse) => match char {
+                with 0 => 0x48 // 'H'
+                with 1 => 0x69 // 'i'
+                with 2 => 0x21 // '!'
+                with 3 => 0x0d // carriage return
+                with 4 => 0x0a // line feed
+                else => 0x00
+            }
+            else => 0x00
+        }
+    }
+}

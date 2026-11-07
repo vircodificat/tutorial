@@ -1,0 +1,66 @@
+top top::Synchronizer
+vcd trace.vcd
+
+# Pin async_in and tick twice to drain any start-up uncertainty.
+# After two cycles with async_in=false, both flops hold false
+# regardless of their power-on state.
+poke top.async_in false
+tick
+tick
+assert top.synced == false
+
+# --- Raise async_in. The pipeline needs TWO ticks to deliver the change. ---
+poke top.async_in true
+
+# After ONE tick: sync_a has captured true, but sync_b -- and therefore
+# synced -- still holds false. Never trust sync_a directly.
+tick
+assert top.synced == false
+
+# After the SECOND tick: sync_b has the settled value. synced goes high.
+tick
+assert top.synced == true
+
+# --- Lower async_in. The same two-cycle rule applies on the falling edge. ---
+poke top.async_in false
+
+# One tick: sync_a has gone false, sync_b still holds true.
+tick
+assert top.synced == true
+
+# Two ticks: sync_b catches up, synced goes false.
+tick
+assert top.synced == false
+
+# --- Fast pulse: async_in high for exactly one cycle. ---
+# A one-flop design passes the pulse straight to the output after one
+# cycle and drops it after one more. The two-flop design delays it by
+# exactly one extra cycle: the asserts below confirm that delay is real.
+
+poke top.async_in true
+tick
+# sync_a=true, sync_b=false -- synced should still be false.
+assert top.synced == false
+
+poke top.async_in false
+tick
+# sync_a=false, sync_b=true -- the pulse arrives at synced, one cycle late.
+assert top.synced == true
+
+tick
+# sync_a=false, sync_b=false -- the pulse clears.
+assert top.synced == false
+
+# --- One more rise-and-fall to close the story. ---
+poke top.async_in true
+tick
+assert top.synced == false
+tick
+assert top.synced == true
+poke top.async_in false
+tick
+assert top.synced == true
+tick
+assert top.synced == false
+
+exit

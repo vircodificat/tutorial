@@ -1,0 +1,86 @@
+//! A two-stage pipeline: stage one doubles, a stage register banks,
+//! stage two adds one.
+
+//> `Top` is a two-stage pipeline in miniature. Stage one doubles the
+//> incoming byte, a stage register banks the intermediate result, and
+//> stage two turns the banked value into the final answer. Valid/ready
+//> handshakes on both sides keep every word accounted for.
+pub mod Top {
+    incoming clock : Clock
+
+    incoming inp_valid : Bit
+    incoming inp_data  : Word[8]
+
+    incoming out_ready : Bit
+
+    // `inp_ready` is the pipeline's answer to the producer: it says
+    // whether the coming edge will actually take `inp_data`.
+    outgoing inp_ready : Bit dependson out_ready {
+        it := match banked {
+            with @Valid(_) => false
+            with @Invalid() => true
+        }
+    }
+
+    // Stage two's side of the handshake: `out_valid` says a word is
+    // banked and waiting, the consumer answers with `out_ready`, and
+    // a transfer happens only when both are high in the same cycle.
+    outgoing out_valid : Bit {
+        it := match banked {
+            with @Valid(_) => true
+            with @Invalid() => false
+        }
+    }
+
+    // Stage two consumes the banked word: add one for the final
+    // answer. It depends only on the bank, never on `inp_data`.
+    outgoing out_data : Word[9] {
+        it := match banked {
+            with @Valid(data) => data + 1w9
+            with @Invalid() => 0
+        }
+    }
+
+    // Stage one, purely combinational: doubling with `+.` widens the
+    // sum to Word[9], so even 0xFF doubled keeps its carry bit.
+    wire stage1_data : Word[9] {
+        it := inp_data +. inp_data
+    }
+
+    // A transfer out fires exactly when a banked word meets a ready
+    // consumer. The pattern @Valid(_) asks only "is there a word?"
+    wire out_fires : Bit {
+        it := match banked {
+            with @Valid(_) => out_ready
+            with @Invalid() => false
+        }
+    }
+
+    // A transfer in fires when the producer offers a word and the
+    // bank can take it on this very edge — empty now, or draining.
+    wire inp_fires : Bit {
+        it := match banked {
+            with @Valid(_) => inp_valid && out_ready
+            with @Invalid() => inp_valid
+        }
+    }
+
+    // The stage register banks the intermediate result and its valid
+    // bit together, as one Valid[Word[9]]. Stage two sees only what
+    // is banked here, never the live input.
+    reg banked : Valid[Word[9]] {
+        initial it <= @Invalid()
+        if {
+            // On a cycle where the bank is also draining, refill
+            // wins: the leaving word's slot is taken before it is
+            // missed.
+            when inp_fires {
+                it <= @Valid(stage1_data)
+            }
+            // With nothing new arriving, a drain empties the bank.
+            when out_fires && !inp_fires {
+                it <= @Invalid()
+            }
+        }
+    }
+}

@@ -1,0 +1,268 @@
+//! A tour of someone else's register file, printed over the UART.
+
+import rf
+import uart_sender
+
+//> `Top` binds to the virtual board and introduces the black box.
+//> It plants a few words in the vendor register file, reads them
+//> back through both ports, and prints what came out: one line of
+//> eight hex digits per read.
+pub mod Top for virt::Virt {
+    incoming clock : Clock
+
+    // The board's other pins.  This program never listens to the
+    // UART's receive line or the SPI flash, but the platform has
+    // no defaults for them, so they must be declared -- `unused`
+    // says the silence is on purpose.
+    incoming rx : Bit
+    incoming spi_miso : Bit
+
+    //> The UART line to the host, where the tour is printed.
+    outgoing tx : Bit {
+        it := sender.tx
+    }
+
+    //> `@Valid(0)` once the last character is safely on the wire.
+    outgoing exit : Valid[Word[8]] {
+        it := if {
+            when !active && sender.ready => @Valid(0)
+            else => @Invalid()
+        }
+    }
+
+    unused rx
+    unused spi_miso
+
+    // The black box itself.  Connecting it is ordinary Virdant
+    // wiring: an `it` block, every port of `Rf` by name, nothing
+    // more.
+    //
+    // `READ_LATENCY` is pinned to `"ZERO"` here, overriding the
+    // vendor's declared default of `"ONE"`: this shell reads
+    // combinationally, and the tour asks its question the very
+    // cycle after a write lands.  Instance values override the
+    // declaration's defaults, and unknown names are simply
+    // appended -- annotations, not a checked contract, so keeping
+    // them in step with the port widths is on us.
+    @parameter("READ_LATENCY", "ZERO")
+    mod regs of rf::Rf {
+        it.clock := clock
+        it.write := write_strobe
+        it.rd := write_addr
+        it.rd_in := write_data
+        it.rs1 := raddr
+        it.rs2 := raddr
+        val_a := it.rs1_out
+        val_b := it.rs2_out
+    }
+
+    // Serializes one character per handshake.
+    mod sender of uart_sender::UartSender {
+        it.clock := clock
+        it.data := character
+        it.data_valid := active && boot_done
+    }
+
+    // The simulated board trusts the first start bit only after
+    // the line has idled high for a while, so hold quiet for 256
+    // cycles after power-on.
+    reg boot : Word[8] {
+        initial it <= 0
+        if {
+            when it != 255 {
+                it <= it + 1
+            }
+        }
+    }
+
+    // The tour walks one step per line.  A step spends three
+    // cycles on the operation -- present the write, let the box
+    // land it, present the read address -- and then nine accepted
+    // characters printing the line.
+    reg phase : Word[2] {
+        initial it <= 0
+        if {
+            // A finished line restarts the engine for the next
+            // step; first-match-wins keeps this arm ahead of the
+            // plain countdown below.
+            when line_done {
+                it <= 0
+            }
+            when it != 3 {
+                it <= it + 1
+            }
+        }
+    }
+
+    reg step : Word[3] {
+        initial it <= 0
+        if {
+            when line_done && it != 6 {
+                it <= it + 1
+            }
+        }
+    }
+
+    // The cursor along one line: column 0 is the leading space
+    // that gives the board a crisp first measure of the bit
+    // period, columns 1-8 are the eight hex digits of `current`,
+    // and column 9 is the newline.
+    reg col : Word[4] {
+        initial it <= 0
+        if {
+            when accept {
+                it <= if {
+                    when it == 9 => 0
+                    else => it + 1
+                }
+            }
+        }
+    }
+
+    // Stays true until the final line's newline is on its way.
+    reg active : Bit {
+        initial it <= true
+        if {
+            when line_done && step == 6 {
+                it <= false
+            }
+        }
+    }
+
+    // The word on display, latched from a read port at the end of
+    // the step's read cycle.  Step 2 reads through the second
+    // port, and step 6 prints how many writes the box accepted.
+    reg current : Word[32] {
+        initial it <= 0
+        if {
+            when phase == 2 {
+                it <= if {
+                    when step == 2 => val_b
+                    when step == 6 => word(0w24, write_count)
+                    else => val_a
+                }
+            }
+        }
+    }
+
+    // Counts writes the box has actually accepted, one per
+    // operation, tallied in the read cycle when the write has
+    // landed.  x0 is hardwired to zero, so a write aimed there
+    // never lands, and the shell declines to count it.
+    reg write_count : Word[8] {
+        initial it <= 0
+        if {
+            when phase == 2 && write_op && write_addr != 0 {
+                it <= it + 1
+            }
+        }
+    }
+
+    // Two windows onto the same file: the words agree, and the
+    // second window proves the wiring works port by port.
+    wire val_a : Word[32]
+    wire val_b : Word[32]
+
+    wire boot_done : Bit {
+        it := boot == 255
+    }
+
+    // A character goes on the wire exactly when the sender takes
+    // one -- and never before the boot quiet period is over.
+    wire accept : Bit {
+        it := active && boot_done && sender.ready
+    }
+
+    wire line_done : Bit {
+        it := accept && col == 9
+    }
+
+    // The step's operation, straight off the step number: which
+    // register to write (if any), with what data, and which
+    // address the line's digits were read from.
+    wire write_op : Bit {
+        it := match step {
+            with 1 => true
+            with 3 => true
+            with 4 => true
+            with 5 => true
+            else => false
+        }
+    }
+
+    wire write_addr : Word[5] {
+        it := match step {
+            with 1 => 5
+            with 3 => 5
+            with 4 => 0
+            with 5 => 31
+            else => 0
+        }
+    }
+
+    wire write_data : Word[32] {
+        it := match step {
+            with 1 => 0x000000C3
+            with 3 => 0x0000003D
+            with 4 => 0x000000FF
+            with 5 => 0x12345678
+            else => 0
+        }
+    }
+
+    wire raddr : Word[5] {
+        it := match step {
+            with 0 => 5
+            with 1 => 5
+            with 2 => 5
+            with 3 => 5
+            with 4 => 0
+            with 5 => 31
+            else => 0
+        }
+    }
+
+    // The write strobe rides the op for its first two cycles: the
+    // box samples what it sees on one edge and lands the write on
+    // the next, so by the read cycle (phase 2) it has settled.
+    wire write_strobe : Bit {
+        it := write_op && phase < 2
+    }
+
+    // The digit index along the line: `col` minus the space.
+    wire dcol : Word[4] {
+        it := col - 1
+    }
+
+    // One hex digit of `current`: the high half while `dcol[2]`
+    // is low, the low half once it is up.  Slices are exclusive on
+    // top, so `current[32..16]` is the upper half.
+    wire half : Word[16] {
+        it := if {
+            when !dcol[2] => current[32..16]
+            else => current[16..0]
+        }
+    }
+
+    // `dcol[2..0]` is the digit index mod 4: which nibble of the
+    // half is on display.
+    wire nibble : Word[4] {
+        it := match dcol[2..0] {
+            with 0 => half[16..12]
+            with 1 => half[12..8]
+            with 2 => half[8..4]
+            with 3 => half[4..0]
+        }
+    }
+
+    // ASCII: digits keep their run, letters start seven steps up
+    // from the last digit.
+    wire character : Word[8] {
+        it := if {
+            when col == 0 => 0x20
+            when col == 9 => 0x0a
+            when nibble < 10 => word(0w4, nibble) + 0x30
+            else => word(0w4, nibble) + 0x37
+        }
+    }
+}

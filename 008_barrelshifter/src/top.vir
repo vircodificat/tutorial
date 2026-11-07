@@ -1,0 +1,40 @@
+//! An 8-bit barrel shifter, built from three stages of pure wiring.
+
+//> `BarrelShifter` shifts `value` left by `shamt` bits, zeros
+//> pouring in underneath. Virdant has no shift operator to lean
+//> on: a shift is just rerouting bits.
+pub mod BarrelShifter {
+    // The byte to shift, and how far to shift it. `shamt` counts
+    // 0 through 7, so three bits hold every possibility.
+    incoming value : Word[8]
+    incoming shamt : Word[3]
+
+    // A left shift by n drops the top n bits off the end and
+    // appends n zeros at the bottom. With no `<<` in the language,
+    // the idiom is `word()` plus a slice: keep the bottom 8-n bits
+    // and glue n zeros underneath. Slices are exclusive on top, so
+    // `value[7..0]` is bits 6..0 -- seven bits, not eight.
+    wire stage1 : Word[8] {
+        it := mux(shamt[0], word(value[7..0], 0w1), value)
+    }
+
+    // One stage per bit of `shamt`. This stage shifts stage1's
+    // result by 2 when bit 1 is set, and the stages chain, so the
+    // ladder together shifts by any amount from 0 through 7.
+    wire stage2 : Word[8] {
+        // BUG: this line is wrong.
+        it := mux(shamt[1], word(stage1[8..2], 0w2), stage1)
+    }
+
+    // The last rung: shift by 4 when bit 2 is set. Whatever a
+    // stage is not asked to shift, it passes through unchanged.
+    wire stage4 : Word[8] {
+        it := mux(shamt[2], word(stage2[4..0], 0w4), stage2)
+    }
+
+    // Every stage is combinational, so `shifted` answers in the
+    // same cycle and declares every incoming port it reads.
+    outgoing shifted : Word[8] dependson value, shamt {
+        it := stage4
+    }
+}

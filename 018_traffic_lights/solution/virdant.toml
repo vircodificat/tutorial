@@ -1,0 +1,5 @@
+[project]
+name = "018_traffic_lights"
+
+[prog]
+top = "top::TrafficLight"

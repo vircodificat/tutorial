@@ -1,0 +1,48 @@
+//! A mod-5 counter with a loadable starting value.
+
+//> `ModCounter` counts from 0 up to a fixed limit of 5, then wraps
+//> back to 0 and counts again. A `load` input lets you jump the counter
+//> to any value you like, taking priority over counting and wrapping.
+pub mod ModCounter {
+    incoming clock : Clock
+    // `load` and `load_data` together let you place the counter anywhere.
+    // When `load` is high, the counter jumps to `load_data` on the next
+    // clock edge, regardless of what the count currently says.
+    incoming load : Bit
+    incoming load_data : Word[8]
+
+    // `count` holds the current value. It updates only on a clock edge,
+    // and only when a `when` arm fires. If no arm fires, the register
+    // simply holds whatever it already contained -- this is the
+    // fundamental character of a register.
+    reg count : Word[8] {
+        initial it <= 0
+        if {
+            // Load has the highest priority: it overrides both the wrap
+            // check and the increment arm below.
+            when load {
+                it <= load_data
+            }
+            // Wrap: when the count reaches 5, the NEXT clock edge snaps
+            // it back to zero. `count` shows 5 for exactly one cycle
+            // before resetting.
+            when count == 5 {
+                it <= 0
+            }
+            // No arm above fired: just count up.
+            else {
+                it <= it + 1
+            }
+        }
+    }
+
+    outgoing value : Word[8] {
+        it := count
+    }
+
+    // `at_limit` goes high for the one cycle when `count` holds 5,
+    // right before the next edge wraps it back to zero.
+    outgoing at_limit : Bit {
+        it := count == 5
+    }
+}

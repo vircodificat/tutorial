@@ -1,0 +1,5 @@
+[project]
+name = "024_tristate_bus"
+
+[prog]
+top = "top::Top"

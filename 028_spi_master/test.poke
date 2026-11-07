@@ -1,0 +1,296 @@
+top top::SpiMaster
+vcd trace.vcd
+
+# The bus at rest: nothing offered, sck parked low.
+poke top.start false
+poke top.data_to_send 0x00
+poke top.miso false
+tick
+assert top.busy == false
+assert top.sck == false
+
+# ========================== Byte 1: 0xA5 ==========================
+# The controller sends 0xA5 while the device answers 0x3C.
+# Watch mosi hold each bit through a leading edge and change only
+# on the trailing edge that follows.
+poke top.data_to_send 0xA5
+# The device shows its first bit as soon as the transfer begins.
+poke top.miso false
+poke top.start true
+tick
+poke top.start false
+# Transfer underway: the byte is latched, sck still rests low, and
+# the MSB of 0xA5 is already waiting on mosi.
+assert top.busy == true
+assert top.sck == false
+assert top.mosi == top.data_to_send[7]
+# Leading edge 1: sck rises, both sides sample, mosi holds steady.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[7]
+assert top.received == 0x00
+poke top.miso false
+# Trailing edge 1: sck falls, bit 6 of 0xA5 takes over the wire.
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[6]
+# Leading edge 2.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[6]
+assert top.received == 0x00
+poke top.miso true
+# Trailing edge 2.
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[5]
+# Leading edge 3: the device's first 1 finally shows up.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[5]
+assert top.received == 0x01
+poke top.miso true
+# Trailing edge 3.
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[4]
+# Leading edge 4.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[4]
+assert top.received == 0x03
+poke top.miso true
+# Trailing edge 4.
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[3]
+# Leading edge 5.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[3]
+assert top.received == 0x07
+poke top.miso true
+# Trailing edge 5.
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[2]
+# Leading edge 6.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[2]
+assert top.received == 0x0f
+poke top.miso false
+# Trailing edge 6.
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[1]
+# Leading edge 7.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[1]
+assert top.received == 0x1e
+poke top.miso false
+# Trailing edge 7.
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[0]
+# Leading edge 8: the last sample lands; received is complete.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[0]
+assert top.received == 0x3c
+# Trailing edge 8: sck falls one last time and the transfer ends.
+tick
+assert top.busy == false
+assert top.sck == false
+assert top.received == 0x3c
+
+# A breath between bytes: sck rests low, nobody is listening.
+tick
+assert top.busy == false
+assert top.sck == false
+
+# ========================== Byte 2: 0x00 ==========================
+# The quietest byte there is: mosi stays low the whole way through,
+# while the device answers 0xFF, all eight bits high.
+poke top.data_to_send 0x00
+poke top.miso true
+poke top.start true
+tick
+poke top.start false
+assert top.busy == true
+assert top.sck == false
+assert top.mosi == top.data_to_send[7]
+# Leading edge 1.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[7]
+assert top.received == 0x01
+poke top.miso true
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[6]
+# Leading edge 2.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[6]
+assert top.received == 0x03
+poke top.miso true
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[5]
+# Leading edge 3.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[5]
+assert top.received == 0x07
+poke top.miso true
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[4]
+# Leading edge 4.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[4]
+assert top.received == 0x0f
+poke top.miso true
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[3]
+# Leading edge 5.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[3]
+assert top.received == 0x1f
+poke top.miso true
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[2]
+# Leading edge 6.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[2]
+assert top.received == 0x3f
+poke top.miso true
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[1]
+# Leading edge 7.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[1]
+assert top.received == 0x7f
+poke top.miso true
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[0]
+# Leading edge 8.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[0]
+assert top.received == 0xff
+tick
+assert top.busy == false
+assert top.sck == false
+assert top.received == 0xff
+
+# Another breath between bytes.
+tick
+assert top.busy == false
+assert top.sck == false
+
+# ========================== Byte 3: 0xFF ==========================
+# The loudest byte there is: mosi stays high the whole way through.
+# The device answers 0x81, whose reply keeps sck high for seven
+# samples before a single low bit arrives at the very bottom.
+poke top.data_to_send 0xFF
+poke top.miso true
+poke top.start true
+tick
+poke top.start false
+assert top.busy == true
+assert top.sck == false
+assert top.mosi == top.data_to_send[7]
+# Leading edge 1.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[7]
+assert top.received == 0x01
+poke top.miso false
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[6]
+# Leading edge 2. A stray `start` pulse mid-transfer should be
+# politely ignored: the byte in flight keeps its shape.
+poke top.start true
+tick
+assert top.busy == true
+assert top.sck == true
+assert top.mosi == top.data_to_send[6]
+assert top.received == 0x02
+poke top.start false
+poke top.miso false
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[5]
+# Leading edge 3.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[5]
+assert top.received == 0x04
+poke top.miso false
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[4]
+# Leading edge 4.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[4]
+assert top.received == 0x08
+poke top.miso false
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[3]
+# Leading edge 5.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[3]
+assert top.received == 0x10
+poke top.miso false
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[2]
+# Leading edge 6.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[2]
+assert top.received == 0x20
+poke top.miso false
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[1]
+# Leading edge 7.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[1]
+assert top.received == 0x40
+poke top.miso true
+tick
+assert top.sck == false
+assert top.mosi == top.data_to_send[0]
+# Leading edge 8: the lone 0 finally arrives, riding at the bottom.
+tick
+assert top.sck == true
+assert top.mosi == top.data_to_send[0]
+assert top.received == 0x81
+tick
+assert top.busy == false
+assert top.sck == false
+assert top.received == 0x81
+
+# The bus settles back into the grass: sck low, nothing moving.
+tick
+assert top.busy == false
+assert top.sck == false
+
+exit

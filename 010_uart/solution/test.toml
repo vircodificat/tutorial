@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial UART lesson: walk one byte onto the wire, bit by bit."
+script = "test.poke"

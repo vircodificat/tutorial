@@ -1,0 +1,37 @@
+//! PWM: one pin, painted in shades of gray.
+
+//> `Pwm` dims an LED by chopping it: a counter sweeps the whole
+//> period, and a single compare holds the pin high for the slice
+//> of the sweep that falls below `brightness`.
+pub mod Pwm {
+    incoming clock : Clock
+
+    // The brightness knob, 0 through 255. The duty cycle — the
+    // fraction of each period the pin spends high — is
+    // brightness/256: the LED glows while the sweep is below the
+    // knob, and rests dark above it.
+    incoming brightness : Word[8]
+
+    // The LED pin. The compare is plain combinational wiring, with
+    // no register between the sweep and the pin, so the level
+    // tracks the sweep exactly — and a knob turn takes hold at once.
+    outgoing led : Bit dependson brightness {
+        it := sweep < brightness
+    }
+
+    // The sweep. A Word[8] that keeps adding wraps all by itself:
+    // 255 + 1 lands back on 0, so the period is the full 256
+    // counts, and every duty cycle is measured against that
+    // whole range.
+    reg sweep : Word[8] {
+        initial it <= 0
+        if {
+            when sweep == 127 {
+                it <= 0
+            }
+            else {
+                it <= it + 1
+            }
+        }
+    }
+}

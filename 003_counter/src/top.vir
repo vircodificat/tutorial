@@ -1,0 +1,6 @@
+pub mod Counter {
+    incoming inp : Word[8]
+    outgoing out : Word[8] dependson inp
+
+    out := inp
+}

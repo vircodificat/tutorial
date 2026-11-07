@@ -1,0 +1,5 @@
+[project]
+name = "030_double_dabble"
+
+[prog]
+top = "top::DoubleDabble"

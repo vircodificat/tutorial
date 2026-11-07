@@ -1,0 +1,5 @@
+[project]
+name = "031_pipeline"
+
+[prog]
+top = "top::Top"

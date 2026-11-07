@@ -1,0 +1,43 @@
+//! The vendor's register file, declared from the outside only.
+
+//> `Rf` is someone else's Verilog: a 32-word register file with one
+//> registered write port and two read ports.
+//>
+//> An `ext mod` declares only the boundary -- the ports -- and no logic
+//> at all.  Virdant checks every wire we connect to it, but never
+//> looks inside; the Verilog itself lives in `ext/rf.sv`.
+//>
+//> Ext mods cannot use generic parameters.  Vendor modules are tuned
+//> with Verilog parameters, and Virdant carries those as @parameter
+//> annotations, declared here with their defaults.
+@parameter("XLEN", 32)
+@parameter("READ_LATENCY", "ONE")
+pub ext mod Rf {
+    //> System clock. Writes land on its rising edge.
+    incoming clock : Clock
+
+    //> Write-enable for the write port.
+    incoming write : Bit
+
+    //> Destination register for the write.
+    incoming rd : Word[5]
+
+    //> Write data.
+    incoming rd_in : Word[32]
+
+    //> Read address for the first read port.
+    incoming rs1 : Word[5]
+
+    //> Read address for the second read port.
+    incoming rs2 : Word[5]
+
+    //> Word addressed by `rs1`.
+    //>
+    //> The declaration promises these reads may depend on `rs1`
+    //> in the same cycle, and whatever instantiates `Rf` inherits
+    //> that promise.
+    outgoing rs1_out : Word[32] dependson rs1
+
+    //> Word addressed by `rs2`, same promise as `rs1_out`.
+    outgoing rs2_out : Word[32] dependson rs2
+}

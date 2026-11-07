@@ -1,0 +1,59 @@
+top top::Top
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.go false
+
+# --- A fresh master sits at step 0, waiting for `go`. ---
+assert top.progress == 0
+assert top.done == false
+assert top.readback == 0
+
+# --- Idle cycles change nothing. ---
+tick 3
+assert top.progress == 0
+assert top.done == false
+assert top.readback == 0
+
+# --- Say `go`: the master sets out, one transaction per cycle. ---
+poke top.go true
+tick
+poke top.go false
+advance
+assert top.progress == 1
+assert top.done == false
+
+# --- Steps 1 and 2 are the writes. ---
+# The readback register should not have moved yet: nothing has
+# been read, only written.
+tick
+advance
+assert top.progress == 2
+assert top.readback == 0
+
+tick
+advance
+assert top.progress == 3
+assert top.readback == 0
+
+# --- Steps 3 and 4 read the two written bytes back. ---
+tick
+advance
+assert top.progress == 4
+assert top.readback == 0xA1
+
+tick
+advance
+assert top.progress == 5
+assert top.done == true
+assert top.readback == 0xB2
+
+# --- Finished: the master rests, and its answers hold steady. ---
+tick 3
+assert top.progress == 5
+assert top.done == true
+assert top.readback == 0xB2
+
+exit

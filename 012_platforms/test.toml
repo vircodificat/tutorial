@@ -1,0 +1,4 @@
+kind = "run"
+description = "Platforms lesson: `vir run` simulates the design on the virtual board; it passes when the greeting is printed and the program exits 0."
+cycle_limit = 2000
+run_args = ["--fps-no-cap"]

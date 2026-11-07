@@ -1,0 +1,61 @@
+//! Debouncing: refusing to believe a button until it holds still.
+
+//> `Debouncer` watches a raw button pin and reports the level the
+//> button has truly settled on.
+//>
+//> A real switch's metal contacts chatter for milliseconds after
+//> every press — an eternity of nonsense to a fast clock. The cure
+//> is a small counter that only believes a change after the raw
+//> input has held it, still and steady, for a good long while.
+pub mod Debouncer {
+    incoming clock : Clock
+
+    // The raw pin, straight from the switch. Bouncy as a breeze.
+    incoming raw : Bit
+
+    // The level the button is *really* at, once the chatter dies
+    // down.
+    outgoing pressed : Bit {
+        it := level
+    }
+
+    // The debounced level. Power-on assumes the switch rests
+    // unpressed, low.
+    reg level : Bit {
+        initial it <= false
+    }
+
+    // How many cycles in a row the raw input has disagreed with
+    // `level`. A bounce lasts milliseconds — thousands of cycles —
+    // so sixteen is far too few for a real switch and just right
+    // for watching one misbehave.
+    reg disagree_count : Word[4] {
+        initial it <= 0
+    }
+
+    // The whole debounce is this one bargain: count the cycles the
+    // raw input has *continuously* disagreed with the output, and
+    // only believe a change once the count fills up.
+    if {
+        when raw != level {
+            if {
+                when disagree_count == 15 {
+                    // Sixteen cycles of unbroken disagreement is
+                    // news worth reporting. Adopt it, and start
+                    // counting afresh.
+                    level <= raw
+                    disagree_count <= 0
+                }
+                else {
+                    disagree_count <= disagree_count + 1
+                }
+            }
+        }
+        else {
+            // Raw input agrees with the output: all quiet. A
+            // disagreement only counts while it lasts, so every
+            // quiet cycle pays the count back to zero.
+            disagree_count <= 0
+        }
+    }
+}

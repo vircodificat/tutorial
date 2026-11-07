@@ -1,0 +1,96 @@
+top top::Gcd
+vcd trace.vcd
+
+# Pin every incoming port before the first tick.
+# An undriven port wanders; a wandering input makes for
+# a very confusing garden.
+poke top.start false
+poke top.a 0
+poke top.b 0
+
+# --- Initial state: idle and quiet. ---
+assert top.busy == false
+assert top.done == false
+
+# === Case 1: gcd(4, 4) = 4, equal inputs ===
+# When a == b the Run state detects equality on its very first
+# step, so Done arrives in a single computation tick.
+poke top.start true
+poke top.a 4
+poke top.b 4
+tick
+poke top.start false
+tick
+advance
+assert top.done == true
+assert top.result == 4
+
+# === Case 2: gcd(9, 3) = 3, a > b ===
+# 9 -> 6 -> 3 == 3: three steps, all in the x > y arm.
+poke top.start true
+poke top.a 9
+poke top.b 3
+tick
+poke top.start false
+tick
+tick
+tick
+advance
+assert top.done == true
+assert top.result == 3
+
+# === Case 3: gcd(5, 1) = 1, one argument is 1 ===
+# Every step uses x > y; x shrinks from 5 down to 1.
+poke top.start true
+poke top.a 5
+poke top.b 1
+tick
+poke top.start false
+tick
+tick
+tick
+tick
+tick
+advance
+assert top.done == true
+assert top.result == 1
+
+# === Case 4: gcd(4, 26) = 2, a < b ===
+# Correct path: y falls 26 -> 22 -> 18 -> ... -> 2, then x=4 > y=2: x=2.
+# Broken path: when x < y the wrong register is updated, x wraps
+# to a large value and converges to 26 instead of 2.
+# 10 ticks after loading bound both paths without any risk of hanging.
+poke top.start true
+poke top.a 4
+poke top.b 26
+tick
+poke top.start false
+tick
+tick
+tick
+tick
+tick
+tick
+tick
+tick
+tick
+tick
+advance
+assert top.done == true
+assert top.result == 2
+
+# === Case 5: gcd(63, 21) = 21, larger pair ===
+# 63 > 21: x = 42; 42 > 21: x = 21; equal: Done.
+poke top.start true
+poke top.a 63
+poke top.b 21
+tick
+poke top.start false
+tick
+tick
+tick
+advance
+assert top.done == true
+assert top.result == 21
+
+exit

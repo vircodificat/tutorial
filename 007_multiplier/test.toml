@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial multiplier lesson: shift-and-add multiplication over four work cycles."
+script = "test.poke"

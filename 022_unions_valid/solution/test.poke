@@ -1,0 +1,101 @@
+top top::GreenhouseMonitor
+vcd trace.vcd
+
+# The sensors' channel is poked every cycle below, valid or not:
+# a maybe-there's-data line is always driven, it just sometimes
+# answers "nothing this time".
+
+# --- Phase 1: power-on. Both shelves start empty. ---
+# Nothing has been measured yet, so the honest answer to "what is
+# the latest moisture?" is @Invalid(), not zero.
+poke top.reading #Invalid
+tick
+assert top.fresh == false
+assert top.latest_moisture == #Invalid
+assert top.latest_temperature == #Invalid
+
+# --- Phase 2: the first moisture reading arrives. ---
+# `fresh` is combinational: it answers before any clock edge.
+poke top.reading #Valid(#Moisture(63))
+advance
+assert top.fresh == true
+# Then the clock edge latches the reading onto its shelf.
+tick
+assert top.latest_moisture == #Valid(63)
+assert top.latest_temperature == #Invalid
+
+# --- Phase 3: a quiet cycle. The crux of the lesson. ---
+# The channel said "nothing this time". A shelf that forgets its
+# reading every time the garden goes quiet is no shelf at all.
+poke top.reading #Invalid
+advance
+assert top.fresh == false
+tick
+assert top.latest_moisture == #Valid(63)
+assert top.latest_temperature == #Invalid
+
+# --- Phase 4: a temperature arrives. ---
+# The moisture shelf must not even blink: this cycle belonged to
+# the other arm of the union.
+poke top.reading #Valid(#Temperature(21))
+tick
+assert top.fresh == true
+assert top.latest_temperature == #Valid(21)
+assert top.latest_moisture == #Valid(63)
+
+# --- Phase 5: quiet again. Both shelves hold. ---
+poke top.reading #Invalid
+tick
+assert top.fresh == false
+assert top.latest_moisture == #Valid(63)
+assert top.latest_temperature == #Valid(21)
+
+# --- Phase 6: a new moisture replaces the old one. ---
+# Holding is not hoarding: the next real reading overwrites the
+# shelf it belongs to, and only that shelf.
+poke top.reading #Valid(#Moisture(12))
+tick
+assert top.latest_moisture == #Valid(12)
+assert top.latest_temperature == #Valid(21)
+
+# --- Phase 7: edge values. Zero is data too. ---
+# A moisture reading of 0 percent is a bone-dry pot, which is
+# real news, not an empty shelf. It must latch and hold like
+# any other reading.
+poke top.reading #Valid(#Moisture(0))
+tick
+assert top.latest_moisture == #Valid(0)
+poke top.reading #Invalid
+tick
+assert top.latest_moisture == #Valid(0)
+
+# And a temperature of 0 degrees: a frosty night is genuine
+# data, exactly as valid as a warm afternoon.
+poke top.reading #Valid(#Temperature(0))
+tick
+assert top.latest_temperature == #Valid(0)
+assert top.latest_moisture == #Valid(0)
+
+# --- Phase 8: a long quiet stretch, then one last reading. ---
+# Three empty-handed cycles in a row: the VCD should show two
+# flat, unbothered shelves the whole way through.
+poke top.reading #Invalid
+tick
+tick
+tick
+assert top.latest_moisture == #Valid(0)
+assert top.latest_temperature == #Valid(0)
+poke top.reading #Valid(#Temperature(29))
+tick
+assert top.latest_temperature == #Valid(29)
+assert top.latest_moisture == #Valid(0)
+
+# The garden settles into the evening; the channel goes quiet
+# and both shelves keep the last word they heard.
+poke top.reading #Invalid
+tick
+assert top.fresh == false
+assert top.latest_moisture == #Valid(0)
+assert top.latest_temperature == #Valid(29)
+
+exit

@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial double-dabble lesson: convert binary to BCD, one step per clock."
+script = "test.poke"

@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""Create a new tutorial lesson.
+
+Usage: make_lesson <LESSON_NAME>
+
+Runs `vir new <LESSON_NAME>` in the tutorial/ directory, then copies the
+essential files from 000_passthrough/ over the freshly-scaffolded project,
+renaming/fixing them as necessary.
+"""
+
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+TUTORIAL = Path(__file__).resolve().parent
+SOURCE = TUTORIAL / "000_passthrough"
+
+# Files copied verbatim from the template lesson.
+COPY = [
+    "README.md",
+    "Makefile",
+    "test.poke",
+    "test.toml",
+    "src/top.vir",
+]
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print(__doc__, file=sys.stderr)
+        return 1
+
+    name = re.sub(r"^\d{3}_", "", sys.argv[1])
+
+    # Pick the next 3-digit lesson prefix based on existing lesson dirs.
+    used = [
+        int(m.group(1))
+        for entry in TUTORIAL.iterdir()
+        if (m := re.match(r"^(\d{3})_", entry.name))
+    ]
+    name = f"{max(used, default=0) + 1:03d}_{name}"
+    dest = TUTORIAL / name
+    if dest.exists():
+        print(f"error: {dest} already exists", file=sys.stderr)
+        return 1
+
+    # Scaffold the project.
+    subprocess.run(["vir", "new", name], cwd=TUTORIAL, check=True)
+
+    # Copy the template lesson's files over the scaffold.
+    for rel in COPY:
+        src = SOURCE / rel
+        (dest / rel).parent.mkdir(parents=True, exist_ok=True)
+        (dest / rel).write_bytes(src.read_bytes())
+
+    # Merge .gitignore (keep whatever `vir new` wrote, add `*.vcd`).
+    gitignore = dest / ".gitignore"
+    lines = gitignore.read_text().splitlines() if gitignore.exists() else []
+    for line in (SOURCE / ".gitignore").read_text().splitlines():
+        if line not in lines:
+            lines.append(line)
+    gitignore.write_text("\n".join(lines) + "\n")
+
+    # Fix up virdant.toml: template's top module, this lesson's project name.
+    virdant_toml = dest / "virdant.toml"
+    text = (SOURCE / "virdant.toml").read_text()
+    text = text.replace('name = "passthrough"', f'name = "{name}"')
+    virdant_toml.write_text(text)
+
+    print(f"Created lesson {name} in {dest}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

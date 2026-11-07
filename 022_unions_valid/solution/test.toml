@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial unions-and-Valid lesson: a greenhouse monitor that keeps the latest reading of each kind."
+script = "test.poke"

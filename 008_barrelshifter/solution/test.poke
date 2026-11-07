@@ -1,0 +1,115 @@
+top top::BarrelShifter
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.value 0
+poke top.shamt 0
+
+# --- Shifting by 0 is the identity: bits stay put. ---
+poke top.value 0xA5
+advance
+assert top.shifted == 0xA5
+
+# --- A single 1 in bit 0: watch it climb and drop off. ---
+# 0x01 walked up one rung at a time, one bit per stage pair.
+poke top.value 0x01
+poke top.shamt 1
+advance
+assert top.shifted == 0x02
+poke top.shamt 2
+advance
+assert top.shifted == 0x04
+poke top.shamt 3
+advance
+assert top.shifted == 0x08
+poke top.shamt 4
+advance
+assert top.shifted == 0x10
+poke top.shamt 5
+advance
+assert top.shifted == 0x20
+poke top.shamt 6
+advance
+assert top.shifted == 0x40
+poke top.shamt 7
+advance
+assert top.shifted == 0x80
+
+# --- A 1 in the top bit falls off the end of the byte. ---
+poke top.value 0x80
+poke top.shamt 0
+advance
+assert top.shifted == 0x80
+poke top.shamt 1
+advance
+assert top.shifted == 0x00
+poke top.shamt 4
+advance
+assert top.shifted == 0x00
+poke top.shamt 7
+advance
+assert top.shifted == 0x00
+
+# --- All ones: the zeros pour in from underneath. ---
+poke top.value 0xFF
+poke top.shamt 0
+advance
+assert top.shifted == 0xFF
+poke top.shamt 1
+advance
+assert top.shifted == 0xFE
+poke top.shamt 2
+advance
+assert top.shifted == 0xFC
+poke top.shamt 3
+advance
+assert top.shifted == 0xF8
+poke top.shamt 4
+advance
+assert top.shifted == 0xF0
+poke top.shamt 5
+advance
+assert top.shifted == 0xE0
+poke top.shamt 6
+advance
+assert top.shifted == 0xC0
+poke top.shamt 7
+advance
+assert top.shifted == 0x80
+
+# --- A mixed pattern exercises every rung at once. ---
+poke top.value 0xA5
+poke top.shamt 0
+advance
+assert top.shifted == 0xA5
+poke top.shamt 1
+advance
+assert top.shifted == 0x4A
+poke top.shamt 2
+advance
+assert top.shifted == 0x94
+poke top.shamt 3
+advance
+assert top.shifted == 0x28
+poke top.shamt 4
+advance
+assert top.shifted == 0x50
+poke top.shamt 5
+advance
+assert top.shifted == 0xA0
+poke top.shamt 6
+advance
+assert top.shifted == 0x40
+poke top.shamt 7
+advance
+assert top.shifted == 0x80
+
+# --- One more shape: nibbles swapped by a shift of 4. ---
+poke top.value 0x3C
+poke top.shamt 4
+advance
+assert top.shifted == 0xC0
+
+exit

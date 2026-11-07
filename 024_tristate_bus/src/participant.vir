@@ -1,0 +1,35 @@
+//! One open-drain voice on a shared line.
+
+//> `Participant` holds one stake in a shared, open-drain line: it
+//> can pull the line low, or hold its peace and let the line drift.
+//> It never once drives the line high itself.
+pub mod Participant {
+    //> When `pull` is true, this participant grabs the line low.
+    incoming pull : Bit
+
+    //> This participant's stake in the shared line: a `bus` is a
+    //> tristate port, visible to the parent module, where several
+    //> drivers are allowed to meet.
+    bus sda : Bit {
+        if {
+            // The whole art of open-drain lives in this arm: when
+            // the participant speaks, it drives the line strongly
+            // low. When `pull` is false, no arm fires and the bus
+            // is left undriven -- floating, high impedance, holding
+            // no level at all. Compare that with a `wire`, which
+            // must be driven every single cycle.
+            when pull {
+                it #= false
+            }
+        }
+    }
+
+    //> What this participant hears on the line. A plain reference
+    //> to a `bus` or `net` is a compile error, because the value
+    //> may be floating: reading a tristate component goes through
+    //> `tap`, the reader's assertion that someone is holding the
+    //> line to a real level at this moment.
+    outgoing sees : Bit {
+        it := tap sda
+    }
+}

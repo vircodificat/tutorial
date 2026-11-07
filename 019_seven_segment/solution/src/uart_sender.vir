@@ -1,0 +1,99 @@
+//! A byte-at-a-time UART serializer for the virtual board.
+
+//> One `UartState` per stretch of the wire: idle, the start
+//> bit's low pulse, the eight data bits, the stop bit's high
+//> pulse.
+union type UartState {
+    Idle()
+    Start(pulse : Word[4])
+    Data(bit : Word[3], pulse : Word[4])
+    Stop(pulse : Word[4])
+}
+
+//> Serializes bytes onto a UART line.  Offer a byte with
+//> `data_valid`; `ready` answers high on the cycle the byte is
+//> taken.  The line idles high, and each byte is one low start
+//> bit, eight data bits least-significant first, one high stop
+//> bit.
+pub mod UartSender {
+    incoming clock : Clock
+    incoming data : Word[8]
+    incoming data_valid : Bit
+
+    //> The line itself.
+    outgoing tx : Bit {
+        it := tx_level
+    }
+
+    //> High while idle: `data_valid` && `ready` is the handshake.
+    outgoing ready : Bit {
+        it := accepting
+    }
+
+    // One bit period is nine clock cycles: every state carries a
+    // pulse countdown from 8.  The board times bits by watching
+    // the line, so the count only has to be comfortable, not
+    // exact.
+    reg state : UartState {
+        initial it <= @Idle()
+        it <= match it : UartState {
+            with @Idle() if {
+                when data_valid => @Start(8)
+                else => @Idle()
+            }
+            with @Start(pulse) if {
+                when pulse == 0 => @Data(0, 8)
+                else => @Start(pulse - 1)
+            }
+            with @Data(bit, pulse) if {
+                when pulse > 0 => @Data(bit, pulse - 1)
+                when bit == 7 => @Stop(8)
+                else => @Data(bit + 1, 8)
+            }
+            with @Stop(pulse) if {
+                // Back-to-back: when another byte is already
+                // waiting, the next start bit follows the stop bit
+                // with no gap at all.  The board measures the bit
+                // period from the wire and only trusts a start bit
+                // it has had room to expect, so a settled rhythm is
+                // kinder to it than scattered gaps.
+                when pulse == 0 && data_valid => @Start(8)
+                when pulse == 0 => @Idle()
+                else => @Stop(pulse - 1)
+            }
+        }
+    }
+
+    // A byte is accepted while idle -- or on the stop bit's final
+    // cycle, when the next start bit is already queueing up.
+    wire accepting : Bit {
+        it := match state : UartState {
+            with @Idle() => true
+            with @Stop(pulse) => pulse == 0
+            else => false
+        }
+    }
+
+    // The byte is snapshot on the accepting edge, so `data` is
+    // free to wander while a byte is still on the wire.
+    reg latched_data : Word[8] {
+        if {
+            when accepting && data_valid {
+                it <= data
+            }
+        }
+    }
+
+    // The line level reads straight off the state: low for the
+    // start bit, one data bit at a time -- least-significant
+    // first, so `dyn bit` picks them off the right -- and high
+    // the rest of the day.
+    wire tx_level : Bit {
+        it := match state : UartState {
+            with @Idle() => true
+            with @Start(pulse) => false
+            with @Data(bit, pulse) => latched_data[dyn bit]
+            with @Stop(pulse) => true
+        }
+    }
+}

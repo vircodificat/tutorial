@@ -1,0 +1,42 @@
+//! Three views of one addition: the total, the carry, and the average.
+
+//> `Averager` adds a pair of bytes and reports the sum three ways:
+//> the full-width `total`, the `carried` bit that says whether the
+//> addition outgrew a single byte, and a rounded `average`.
+pub mod Averager {
+    incoming a : Word[8]
+    incoming b : Word[8]
+
+    // `+.` is the widening add: two Word[8] operands produce a
+    // Word[9], and the extra top bit catches what a plain `+`
+    // would silently drop.
+    outgoing total : Word[9] dependson a, b {
+        it := a +. b
+    }
+
+    // A `let` binds a name for the rest of its scope, so a driver
+    // can read like the math it performs. Nothing outside the
+    // let's braces can see its bindings, so every driver that
+    // wants `sum` by name binds its own.
+    outgoing carried : Bit dependson a, b {
+        let sum : Word[9] = a +. b {
+            it := sum[8]
+        }
+    }
+
+    // The average is the total divided by two, with halves rounded
+    // up: add the bit the slice is about to drop, then slice it
+    // off. `rounded[9..1]` keeps bits 8 down to 1 -- eight bits,
+    // which is the same as shifting right by one.
+    //
+    // Bindings may share one comma-separated list, and a later
+    // binding may lean on the ones written before it. The braces
+    // perform driver statements; a `=>` would make the let itself
+    // produce a value instead.
+    outgoing average : Word[8] dependson a, b {
+        let sum : Word[9] = a +. b,
+            rounded : Word[9] = sum + 1w9 {
+            it := rounded[9..1]
+        }
+    }
+}

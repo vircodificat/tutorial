@@ -1,0 +1,100 @@
+//! A two-direction traffic light controller.
+
+//> `LightState` names the phase the controller is in: which
+//> direction is being served, and whether that direction is on
+//> green or on yellow. With no values given, the enumerants are
+//> one-hot encoded -- each state is a single bit, so two states
+//> can never blur into one another.
+enum type LightState {
+    NsGreen
+    NsYellow
+    EwGreen
+    EwYellow
+}
+
+//> `TrafficLight` runs a four-phase cycle for a north-south road
+//> and an east-west road. Each direction gets a green phase and a
+//> short yellow, while the other direction sits at red. One safety
+//> rule orbits the whole design: the two directions must never
+//> both be green, and a yellow always comes before the change.
+pub mod TrafficLight {
+    incoming clock : Clock
+
+    // Six lights, read straight off the phase. Red is not a
+    // state of its own here: it is simply every phase in which
+    // your direction does not have the road.
+    outgoing ns_green : Bit {
+        it := state == #NsGreen
+    }
+
+    outgoing ns_yellow : Bit {
+        it := state == #NsYellow
+    }
+
+    outgoing ns_red : Bit {
+        it := state == #EwGreen || state == #EwYellow
+    }
+
+    outgoing ew_green : Bit {
+        it := state == #EwGreen
+    }
+
+    outgoing ew_yellow : Bit {
+        it := state == #EwYellow
+    }
+
+    outgoing ew_red : Bit {
+        it := state == #NsGreen || state == #NsYellow
+    }
+
+    // The whole controller is two registers moving together.
+    // `state` holds the current phase, and `timer` counts down
+    // the cycles it has left. When the timer runs out, the
+    // phase turns.
+    reg state : LightState {
+        initial it <= #NsGreen
+        if {
+            when timer == 0 {
+                it <= next_state
+            }
+        }
+    }
+
+    // A fresh phase reloads the timer to its own length: a
+    // green loads 3 and counts down 3, 2, 1, 0 -- four cycles.
+    // A yellow loads 1 and lasts two cycles. Real controllers
+    // run orders of magnitude longer; these are shortened so a
+    // test can watch a full cycle.
+    reg timer : Word[2] {
+        initial it <= 3
+        if {
+            when timer == 0 {
+                it <= next_timer
+            }
+            else {
+                it <= it - 1
+            }
+        }
+    }
+
+    // The next phase follows the arrow the lights must obey:
+    // green, then yellow, then the other direction's green.
+    wire next_state : LightState {
+        it := match state {
+            with #NsGreen => #NsYellow
+            with #NsYellow => #NsGreen
+            with #EwGreen => #EwYellow
+            with #EwYellow => #NsGreen
+        }
+    }
+
+    // A phase that is about to begin brings its own timer load.
+    wire next_timer : Word[2] {
+        it := match next_state {
+            with #NsGreen => 3
+            with #NsYellow => 1
+            with #EwGreen => 3
+            with #EwYellow => 1
+        }
+    }
+}

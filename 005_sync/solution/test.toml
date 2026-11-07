@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial synchronizer lesson: two-flop synchronizer brings async input safely into the clock domain."
+script = "test.poke"

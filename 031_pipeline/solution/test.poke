@@ -1,0 +1,106 @@
+top top::Top
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.inp_valid false
+poke top.inp_data 0
+poke top.out_ready true
+
+# --- Phase 1: an empty pipe at power-on. ---
+# The stage register starts empty, so stage two has nothing to show,
+# and the pipeline is glad to accept its very first word.
+assert top.out_valid == false
+assert top.inp_ready == true
+
+# --- Phase 2: one word, all the way through. ---
+# Offer 0x0A: stage one doubles it to 0x14, the bank takes it at the
+# edge, and stage two adds one. Final answer: 0x15.
+poke top.inp_data 0x0A
+poke top.inp_valid true
+tick
+poke top.inp_valid false
+assert top.out_valid == true
+assert top.out_data == 0x15
+# The bank is full, and the consumer is still ready — so the
+# pipeline is happy to take another word this very cycle.
+assert top.inp_ready == true
+# With nothing new offered, the banked word drains away.
+tick
+assert top.out_valid == false
+
+# --- Phase 3: four words back to back, no stall. ---
+# With the consumer always ready, one word leaves and the next one
+# lands in the same edge: a finished word every single cycle.
+poke top.inp_valid true
+poke top.inp_data 0x01
+tick
+assert top.out_data == 0x03
+poke top.inp_data 0x02
+tick
+assert top.out_data == 0x05
+poke top.inp_data 0x03
+tick
+assert top.out_data == 0x07
+poke top.inp_data 0x04
+tick
+assert top.out_data == 0x09
+poke top.inp_valid false
+tick
+assert top.out_valid == false
+
+# --- Phase 4: a stall. The consumer says "wait". ---
+# 0x10 banks in while out_ready is low, then holds as long as the
+# consumer asks — the bank does not forget under pressure.
+poke top.out_ready false
+poke top.inp_valid true
+poke top.inp_data 0x10
+tick
+poke top.inp_valid false
+assert top.out_valid == true
+assert top.out_data == 0x21
+# While the bank is full and the consumer waits, the producer is
+# politely turned away: offering 0x20 now must change nothing.
+poke top.inp_valid true
+poke top.inp_data 0x20
+tick 2
+assert top.out_valid == true
+assert top.out_data == 0x21
+poke top.inp_valid false
+poke top.inp_data 0
+
+# --- Phase 5: the stall lifts, and the bank swaps in one edge. ---
+# The banked 0x10 leaves and the offered 0x20 takes its place in the
+# very same edge — no bubble, no word left on the path.
+poke top.out_ready true
+poke top.inp_valid true
+poke top.inp_data 0x20
+tick
+assert top.out_valid == true
+assert top.out_data == 0x41
+# And the swapped-in word drains in its turn, once nothing new is
+# offered to take its place.
+poke top.inp_valid false
+tick
+assert top.out_valid == false
+assert top.inp_ready == true
+
+# --- Phase 6: edge values. Zero and the very top of the range. ---
+# 0 doubled is 0, and stage two makes it 0x01: a real answer, banked
+# like any other.
+poke top.inp_valid true
+poke top.inp_data 0x00
+tick
+assert top.out_valid == true
+assert top.out_data == 0x01
+# 0xFF doubled would overflow a Word[8]; stage one's `+.` keeps the
+# carry, so 0x1FE banks whole and stage two answers 0x1FF.
+poke top.inp_data 0xFF
+tick
+assert top.out_data == 0x1FF
+poke top.inp_valid false
+tick
+assert top.out_valid == false
+
+exit

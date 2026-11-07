@@ -1,0 +1,38 @@
+//! An 8-bit maximal-length linear-feedback shift register.
+
+//> `Lfsr` is the cheapest pseudo-random number generator hardware
+//> knows: a shift register that feeds a few of its own bits back,
+//> XORed together, into its newly shifted-in bit.
+pub mod Lfsr {
+    incoming clock : Clock
+
+    // The register is the entire state of the generator. `initial`
+    // plants the seed, and the seed must never be zero: with every
+    // tap reading zero, the feedback is zero, and an all-zero
+    // register would sit perfectly still, forever.
+    reg lfsr : Word[8] {
+        initial it <= 0xAC
+        // One clock edge, one step: every bit marches one place
+        // toward the MSB, the oldest bit falls off the top, and the
+        // feedback bit drips in at the bottom. `word(...)` glues the
+        // seven survivors and the newcomer back into one byte.
+        // (Slices are exclusive on top: `it[7..0]` is bits 6..0.)
+        it <= word(it[7..0], feedback)
+    }
+
+    // The feedback bit is the XOR of the tap bits: 0, 4, 5 and 7.
+    // Counted from the newly-shifted-in end, those are taps 1, 5, 6
+    // and 8 -- the primitive polynomial x^8+x^6+x^5+x+1, written out
+    // in bits. "Primitive" is the prize word here: it means maximal
+    // length, so the register visits all 255 nonzero bytes before
+    // it repeats a single one.
+    wire feedback : Bit {
+        it := lfsr[0] ^^ lfsr[4] ^^ lfsr[5] ^^ lfsr[7]
+    }
+
+    // `out` shows the raw state: a new pseudo-random byte on every
+    // clock edge, patternless to the eye yet perfectly repeatable.
+    outgoing out : Word[8] {
+        it := lfsr
+    }
+}

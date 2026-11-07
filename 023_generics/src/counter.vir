@@ -1,0 +1,46 @@
+//! One counter template, planted at many widths.
+
+//> `Counter` counts up by `step` on every enabled cycle, and can be
+//> reloaded with a fresh value at any time.
+//>
+//> Its width is a generic parameter: inside this body, `W` stands for
+//> whatever word type each instantiation supplies. No concrete width
+//> appears anywhere in the template, so the same definition can be
+//> synthesized once as a 4-bit counter and once as a 12-bit counter.
+pub mod Counter[W : Type] {
+    incoming clock : Clock
+    incoming enable : Bit
+    incoming load : Bit
+
+    //> A fresh value to load whenever `load` is high.
+    incoming load_value : W
+
+    //> The amount added on every enabled cycle.
+    //>
+    //> A template cannot write a bare `1` — no width is known yet,
+    //> and a literal needs one — so the step arrives as a port. An
+    //> instantiation that wants a plain up-counter plants it with 1.
+    incoming step : W
+
+    //> The current count, as wide as this instantiation's `W`.
+    outgoing count : W {
+        it := value
+    }
+
+    // The state register is typed `W`: everywhere `W` appears, the
+    // instantiation's own word type is substituted in.
+    reg value : W {
+        // A power-on value would need a literal too, so the template
+        // leaves it `dontcare`: the first load decides where the
+        // count starts.
+        initial it <= dontcare
+        if {
+            when load {
+                it <= load_value
+            }
+            when !load && enable {
+                it <= it + step
+            }
+        }
+    }
+}

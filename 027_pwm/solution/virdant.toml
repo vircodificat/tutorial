@@ -1,0 +1,5 @@
+[project]
+name = "027_pwm"
+
+[prog]
+top = "top::Pwm"

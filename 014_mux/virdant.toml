@@ -1,0 +1,5 @@
+[project]
+name = "014_mux"
+
+[prog]
+top = "top::Mux4"

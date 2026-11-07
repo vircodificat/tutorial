@@ -1,0 +1,5 @@
+[project]
+name = "028_spi_master"
+
+[prog]
+top = "top::SpiMaster"

@@ -1,0 +1,54 @@
+//! A garden path used by many voices: the shared tristate line.
+
+import participant
+
+//> `Top` seats two `Participant`s at one shared, open-drain line,
+//> the same bargain real I2C wiring strikes: nobody ever drives
+//> the line high, anyone may pull it low, and when every hand
+//> comes off the wire must still settle, politely, back to one.
+pub mod Top {
+    //> Participant 0's hand on the line.
+    incoming pull_0 : Bit
+
+    //> Participant 1's hand on the line.
+    incoming pull_1 : Bit
+
+    //> The line as a voltmeter would see it: high while everyone
+    //> is quiet, low while anyone pulls, and back up again once
+    //> every hand comes off.
+    outgoing line_level : Bit {
+        it := tap line
+    }
+
+    //> What each participant hears. Let go and still hear low, and
+    //> you know a neighbor is pulling: a shared line is a wired-AND
+    //> that every participant can read for free.
+    outgoing heard_0 : Bit {
+        it := p0.sees
+    }
+
+    //> Participant 1's ear, same as `heard_0`.
+    outgoing heard_1 : Bit {
+        it := p1.sees
+    }
+
+    mod p0 of participant::Participant {
+        it.pull := pull_0
+        // Attachment, not assignment: `#=#` joins the participant's
+        // bus port into the parent's net, so both stakes become one
+        // electrically shared line. p0, p1, and the pull resistor
+        // all meet here.
+        it.sda #=# line
+    }
+
+    mod p1 of participant::Participant {
+        it.pull := pull_1
+        it.sda #=# line
+    }
+
+    // The shared line itself. Not a `wire`: a wire allows exactly
+    // one driver. A `net` is the tristate line that lives inside a
+    // module, and it may carry any number of drivers -- strong
+    // `#=`, weak `#-`, and attached buses -- resolved by strength.
+    net line : Bit
+}

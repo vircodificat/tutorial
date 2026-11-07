@@ -1,0 +1,5 @@
+[project]
+name = "003_counter"
+
+[prog]
+top = "top::Passthrough"

@@ -1,0 +1,39 @@
+//> `Buffer` holds one byte and shows it on `out`. It is the
+//> passthrough's patient cousin: nothing reaches `out` until a
+//> clock edge says so.
+pub mod Buffer {
+    // A clock is a signal that rises over and over, forever --
+    // and each rise, called a clock edge, is a heartbeat the
+    // whole circuit steps to. With exactly one `Clock` in the
+    // module, Virdant infers it: every register here steps on
+    // this clock's edge without being told.
+    incoming clock : Clock
+
+    incoming inp : Word[8]
+
+    // A `reg` is a register: a little memory that updates only
+    // when a clock edge arrives. Between edges it keeps whatever
+    // it had, which is what makes it different from a wire.
+    reg buffer : Word[8] {
+        // `initial` sets the power-on value, before any clock
+        // edge has ever come. Without it, `buffer` would start
+        // at an unspecified value.
+        initial it <= 0
+        if {
+            // Registers are driven with `<=`, never `:=`.
+            // `when true` fires at every clock edge, so `buffer`
+            // samples `inp` once per edge and then holds that
+            // value until the next one comes along.
+            when true {
+                it <= inp
+            }
+        }
+    }
+
+    // `out` just reads the register, so it can only change when
+    // `buffer` does -- on clock edges. A wire driven from a reg
+    // still uses `:=`, because the wire itself has no memory.
+    outgoing out : Word[8] {
+        it := buffer
+    }
+}

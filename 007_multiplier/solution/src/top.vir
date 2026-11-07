@@ -1,0 +1,95 @@
+//! A shift-and-add sequential multiplier.
+
+//> `Multiplier` computes `a * b` for two 4-bit inputs using the
+//> classic shift-and-add method: one partial product per clock,
+//> one adder, one shift. Assert `start` for one cycle to load;
+//> `done` goes high when `product` holds the result.
+pub mod Multiplier {
+    incoming clock : Clock
+    incoming start : Bit
+    incoming a : Word[4]
+    incoming b : Word[4]
+
+    outgoing done : Bit {
+        it := !busy && step == 4
+    }
+
+    outgoing product : Word[8] {
+        it := acc
+    }
+
+    // `acc` accumulates the running sum of partial products.
+    // Each work cycle we add `a_shifted` when bit zero of `mp`
+    // is set — that is, when `mp[0]` is 1.
+    reg acc : Word[8] {
+        initial it <= 0
+        if {
+            when start {
+                it <= 0
+            }
+            when busy && mp[0] {
+                it <= it + a_shifted
+            }
+        }
+    }
+
+    // `a_shifted` starts as `a` zero-extended to 8 bits and shifts
+    // left by one each work cycle. This weights each partial product
+    // by its bit position: step 0 adds a*1, step 1 adds a*2, etc.
+    // No << in Virdant: shift with word() and a slice.
+    reg a_shifted : Word[8] {
+        initial it <= 0
+        if {
+            when start {
+                it <= zext(a)
+            }
+            when busy {
+                it <= word(it[7..0], 0w1)
+            }
+        }
+    }
+
+    // `mp` is a copy of `b` that shifts right one bit each work
+    // cycle, peeling off the LSB that was just examined and moving
+    // the next bit into the bottom position.
+    // No >> in Virdant: shift with word() and a slice.
+    reg mp : Word[4] {
+        initial it <= 0
+        if {
+            when start {
+                it <= b
+            }
+            when busy {
+                it <= word(0w1, it[4..1])
+            }
+        }
+    }
+
+    // `step` counts the work cycles: 0 through 3 are live steps;
+    // when step reaches 4, all four bits of b have been processed.
+    reg step : Word[3] {
+        initial it <= 0
+        if {
+            when start {
+                it <= 0
+            }
+            when busy {
+                it <= it + 1
+            }
+        }
+    }
+
+    // `busy` gates the work. Set by `start`, cleared when the last
+    // step (step == 3) completes.
+    reg busy : Bit {
+        initial it <= false
+        if {
+            when start {
+                it <= true
+            }
+            when busy && step == 3 {
+                it <= false
+            }
+        }
+    }
+}

@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial SPI lesson: mode-0 master shifts a byte out on mosi while sampling miso."
+script = "test.poke"

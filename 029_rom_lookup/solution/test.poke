@@ -1,0 +1,119 @@
+top top::HexAsciiRom
+vcd trace.vcd
+
+# A ROM answers from constant data, so every check below runs at
+# combinational speed: poke an address, let the wires settle with
+# `advance`, and read the byte straight back. No clock edge ever
+# needs to pass between the question and the answer.
+
+# --- Phase 1: the decimal rows, '0' through '9'. ---
+# The table opens on a tidy neighborhood: ten bytes at 0x30 and up.
+poke top.nibble 0x0
+advance
+assert top.ascii == 0x30
+poke top.nibble 0x1
+advance
+assert top.ascii == 0x31
+poke top.nibble 0x2
+advance
+assert top.ascii == 0x32
+poke top.nibble 0x3
+advance
+assert top.ascii == 0x33
+poke top.nibble 0x4
+advance
+assert top.ascii == 0x34
+poke top.nibble 0x5
+advance
+assert top.ascii == 0x35
+poke top.nibble 0x6
+advance
+assert top.ascii == 0x36
+poke top.nibble 0x7
+advance
+assert top.ascii == 0x37
+poke top.nibble 0x8
+advance
+assert top.ascii == 0x38
+poke top.nibble 0x9
+advance
+assert top.ascii == 0x39
+
+# --- Phase 2: hold one address and make sure nothing drifts. ---
+# Constant data does not wander: ask twice, get the same byte.
+# (Two settles here, and more further down, also give the VCD
+# flat, readable plateaus to debug against.)
+poke top.nibble 0x5
+advance
+assert top.ascii == 0x35
+advance
+assert top.ascii == 0x35
+
+# --- Phase 3: across the gap, to the letters. ---
+# After '9' (0x39) the ASCII codes jump to 0x41 for 'A'. The
+# table feels no seam, and neither should this sweep.
+poke top.nibble 0xA
+advance
+assert top.ascii == 0x41
+poke top.nibble 0xB
+advance
+assert top.ascii == 0x42
+poke top.nibble 0xC
+advance
+assert top.ascii == 0x43
+poke top.nibble 0xD
+advance
+assert top.ascii == 0x44
+poke top.nibble 0xE
+advance
+assert top.ascii == 0x45
+poke top.nibble 0xF
+advance
+assert top.ascii == 0x46
+
+# --- Phase 4: spell with the whole table. ---
+# The classic words a hex dump gets to say. Each character is one
+# more read of the ROM, out of order, the way real callers would.
+poke top.nibble 0xD
+advance
+assert top.ascii == 0x44
+poke top.nibble 0xE
+advance
+assert top.ascii == 0x45
+poke top.nibble 0xA
+advance
+assert top.ascii == 0x41
+poke top.nibble 0xD
+advance
+assert top.ascii == 0x44
+poke top.nibble 0x0
+advance
+assert top.ascii == 0x30
+poke top.nibble 0xB
+advance
+assert top.ascii == 0x42
+poke top.nibble 0xE
+advance
+assert top.ascii == 0x45
+poke top.nibble 0xE
+advance
+assert top.ascii == 0x45
+poke top.nibble 0xF
+advance
+assert top.ascii == 0x46
+
+# --- Phase 5: both ends of the table, one more time. ---
+# The addresses a bug is most likely to drop: the very first row
+# and the very last.
+poke top.nibble 0x0
+advance
+assert top.ascii == 0x30
+advance
+assert top.ascii == 0x30
+poke top.nibble 0xF
+advance
+assert top.ascii == 0x46
+advance
+assert top.ascii == 0x46
+
+exit

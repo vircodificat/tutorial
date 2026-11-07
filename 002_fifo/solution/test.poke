@@ -1,0 +1,106 @@
+top top::Fifo
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.push false
+poke top.pop false
+poke top.push_data 0
+
+# --- A fresh queue is empty, and not full. ---
+assert top.empty == true
+assert top.full == false
+
+# --- Push one byte, then peek at it. ---
+poke top.push true
+poke top.push_data 0xA1
+tick
+poke top.push false
+advance
+assert top.empty == false
+assert top.full == false
+assert top.out == 0xA1
+
+# --- Push a second byte: the queue is now full. ---
+poke top.push true
+poke top.push_data 0xB2
+tick
+poke top.push false
+advance
+assert top.full == true
+assert top.out == 0xA1
+
+# --- A push into a full queue is quietly ignored. ---
+poke top.push true
+poke top.push_data 0x33
+tick
+poke top.push false
+advance
+assert top.full == true
+assert top.out == 0xA1
+
+# --- Pop: the second byte steps forward. ---
+poke top.pop true
+tick
+poke top.pop false
+advance
+assert top.full == false
+assert top.empty == false
+assert top.out == 0xB2
+
+# --- Make room, then fill the back again. ---
+poke top.push true
+poke top.push_data 0x33
+tick
+poke top.push false
+advance
+assert top.full == true
+assert top.out == 0xB2
+
+# --- Drain: two pops, back to back. ---
+poke top.pop true
+tick
+poke top.pop false
+advance
+assert top.out == 0x33
+poke top.pop true
+tick
+poke top.pop false
+advance
+assert top.empty == true
+
+# --- A pop from an empty queue is quietly ignored. ---
+poke top.pop true
+tick
+poke top.pop false
+advance
+assert top.empty == true
+assert top.full == false
+
+# --- Push, serve, push, serve: a steady rhythm. ---
+poke top.push true
+poke top.push_data 0x5E
+tick
+poke top.push false
+advance
+assert top.out == 0x5E
+poke top.pop true
+tick
+poke top.pop false
+advance
+assert top.empty == true
+
+poke top.push true
+poke top.push_data 0xED
+tick
+poke top.push false
+advance
+assert top.out == 0xED
+poke top.pop true
+tick
+poke top.pop false
+advance
+assert top.empty == true
+
+exit

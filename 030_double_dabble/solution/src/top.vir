@@ -1,0 +1,141 @@
+//! Binary to BCD by double dabble: one step of the loop per clock.
+
+//> `DoubleDabble` turns an 8-bit binary number into three BCD
+//> digits — the digit-per-nibble code that seven-segment displays
+//> are waiting to eat.  The software loop (`for` eight times:
+//> adjust, then shift) is unrolled into hardware: one step per
+//> clock, with a step counter keeping the beat.
+pub mod DoubleDabble {
+    incoming clock : Clock
+
+    // The value to convert. Sampled once, on the clock `start` is
+    // accepted; after that the loop works on its own copy.
+    incoming binary : Word[8]
+
+    // Raise for one cycle to begin a conversion.
+    incoming start : Bit
+
+    //> High while idle, low while the loop runs, high again once
+    //> the digits are ready.
+    outgoing done : Bit {
+        it := !busy
+    }
+
+    //> One BCD digit each: the ones, tens, and hundreds of the
+    //> answer.  BCD packs each decimal digit into its own 4-bit
+    //> nibble, so 250 lives as the nibbles 2, 5, 0.
+    outgoing ones : Word[4] {
+        it := bcd[4..0]
+    }
+
+    outgoing tens : Word[4] {
+        it := bcd[8..4]
+    }
+
+    outgoing hundreds : Word[4] {
+        it := bcd[12..8]
+    }
+
+    // The garden bed: three 4-bit BCD digits on the left, eight
+    // bits of binary waiting on the right.  Every clock, the bed
+    // slides one bit further left, so the binary migrates into
+    // the digits a bit at a time.
+    reg bcd : Word[12] {
+        initial it <= 0
+    }
+
+    // The binary not yet shoveled in.  Each step drops its top
+    // bit into `bcd`'s bottom.
+    reg shift : Word[8] {
+        initial it <= 0
+    }
+
+    // Up while the loop is turning; `start` latches a value and
+    // gets things going.
+    reg busy : Bit {
+        initial it <= false
+    }
+
+    // The heartbeat of the unrolled loop.  Software would write
+    // `for step in 0..8`; hardware writes a reg that climbs once
+    // per clock, and the loop ends when the count runs out.
+    reg step : Word[4] {
+        initial it <= 0
+        if {
+            when start && !busy {
+                it <= 0
+            }
+            when busy {
+                it <= it + 1
+            }
+        }
+    }
+
+    // The add-3 rule, one copy per digit: before each shift, any
+    // BCD nibble of 5 or more is topped up by 3.  A digit of 5
+    // shifted would become 10 — more than one BCD digit can hold
+    // — so it is ripened to 8 first; shifting that leaves 6 and
+    // a carry into the next digit up.  (This is the "add 3" that
+    // names the algorithm.)
+    wire ones_adj : Word[4] {
+        it := if {
+            when bcd[4..0] >= 5 => bcd[4..0] + 3w4
+            else => bcd[4..0]
+        }
+    }
+
+    wire tens_adj : Word[4] {
+        it := if {
+            when bcd[8..4] >= 5 => bcd[8..4] + 3w4
+            else => bcd[8..4]
+        }
+    }
+
+    wire hundreds_adj : Word[4] {
+        it := if {
+            when bcd[12..8] >= 5 => bcd[12..8] + 3w4
+            else => bcd[12..8]
+        }
+    }
+
+    // The adjusted digits, lined up for the shift.
+    wire adjusted : Word[12] {
+        it := word(hundreds_adj, tens_adj, ones_adj)
+    }
+
+    // One iteration, as an expression: the digits slide left one
+    // bit, and the top bit of `shift` fills in behind them.
+    wire bcd_next : Word[12] {
+        it := word(adjusted[11..0], shift[7])
+    }
+
+    // The binary side of the same shift: the rest of the bits
+    // move up one, and a zero fills in at the bottom.
+    wire shift_next : Word[8] {
+        it := word(shift[7..0], 0w1)
+    }
+
+    // One statement-level `if` moves the loop forward, once per
+    // clock — the body of the `for` loop, spoken in hardware.
+    if {
+        // Every loop begins by initializing its variables.
+        when start && !busy {
+            busy <= true
+            bcd <= 0
+            shift <= binary
+        }
+        // One step per clock.  The body never changes; the step
+        // counter is what turns "eight times" into "eight clocks".
+        when busy {
+            bcd <= bcd_next
+            shift <= shift_next
+            // The step that began with step == 7 is the eighth:
+            // every binary bit has migrated.  Close the loop.
+            if {
+                when step == 7 {
+                    busy <= false
+                }
+            }
+        }
+    }
+}

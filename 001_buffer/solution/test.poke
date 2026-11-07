@@ -1,0 +1,61 @@
+top top::Buffer
+vcd trace.vcd
+
+# Pin the input before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.inp 0
+
+# --- A fresh register wakes at its power-on value. ---
+assert top.out == 0
+
+# --- Changing the input alone does nothing. ---
+# No clock edge has come yet, so `buffer` still holds its
+# power-on value. Watch `out` stay put.
+poke top.inp 0x42
+advance
+assert top.out == 0
+
+# --- One clock edge captures the input. ---
+tick
+poke top.inp 0
+advance
+assert top.out == 0x42
+
+# --- Between edges, the buffer holds its ground. ---
+poke top.inp 0x99
+advance
+assert top.out == 0x42
+
+# --- The next edge captures the new value. ---
+tick
+poke top.inp 0
+advance
+assert top.out == 0x99
+
+# --- March through the byte's boundaries and some shapes. ---
+poke top.inp 0xFF
+tick
+poke top.inp 0
+advance
+assert top.out == 0xFF
+
+poke top.inp 0x01
+tick
+poke top.inp 0xFE
+advance
+assert top.out == 0x01
+
+poke top.inp 0xAA
+tick
+poke top.inp 0x55
+advance
+assert top.out == 0xAA
+
+poke top.inp 0x80
+tick
+poke top.inp 0x7F
+advance
+assert top.out == 0x80
+
+exit

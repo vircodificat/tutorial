@@ -1,0 +1,5 @@
+[project]
+name = "023_generics"
+
+[prog]
+top = "top::Top"

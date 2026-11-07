@@ -1,0 +1,5 @@
+[project]
+name = "025_edge_detector"
+
+[prog]
+top = "top::EdgeDetector"

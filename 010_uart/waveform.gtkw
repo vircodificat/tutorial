@@ -1,0 +1,29 @@
+[*]
+[*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
+[*] Sat Nov  7 04:57:03 2026
+[*]
+[dumpfile] "/home/vircodificat/projects/virdant/tutorial/010_uart/trace.vcd"
+[dumpfile_mtime] "Sat Nov  7 04:52:31 2026"
+[dumpfile_size] 624
+[savefile] "/home/vircodificat/projects/virdant/tutorial/010_uart/waveform.gtkw"
+[timestart] 0
+[size] 1000 600
+[pos] -1 -1
+*-23.000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 278
+[signals_width] 142
+[sst_expanded] 1
+[sst_vpaned_height] 157
+@28
+top.clock
+top.tx
+@22
+top.bits_left[3:0]
+top.shifter[9:0]
+@28
+top.phase[1:0]
+top.send
+@23
+top.data[7:0]
+[pattern_trace] 1
+[pattern_trace] 0

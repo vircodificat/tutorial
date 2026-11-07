@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial barrel shifter lesson: shift bytes left without a shift operator."
+script = "test.poke"

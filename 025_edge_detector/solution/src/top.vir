@@ -1,0 +1,55 @@
+//! Edge detection: a one-cycle pulse every time a button goes down.
+
+//> `EdgeDetector` watches a button and raises `pulse` for exactly one
+//> clock cycle each time the button goes down.
+pub mod EdgeDetector {
+    incoming clock : Clock
+
+    // The raw button: true while it is held down.
+    incoming button : Bit
+
+    //> `pulse` is high for exactly one clock cycle on each press.
+    //>
+    //> A press is not a level.
+    //> The button may stay down for a hundred cycles, and this must
+    //> still fire only on the one cycle where it just went down.
+    //> So the output cannot be a function of `button` alone — it has
+    //> to ask what the button was a moment ago.
+    outgoing pulse : Bit dependson button {
+        it := press_now
+    }
+
+    //> `press_count` counts presses, one per pulse.
+    //>
+    //> It is here to show what the pulse is for: whatever logic
+    //> comes after can trust that one press means exactly one pulse.
+    outgoing press_count : Word[8] {
+        it := presses
+    }
+
+    // The "previous value" register, the whole trick in one reg.
+    // Every clock edge it drinks in whatever `button` is now, and
+    // holds that value until the next edge. So while this cycle's
+    // pulse is being computed, `prev_button` still holds the
+    // button's value from the last edge — one beat behind.
+    reg prev_button : Bit {
+        initial it <= false
+        it <= button
+    }
+
+    reg presses : Word[8] {
+        initial it <= 0
+        if {
+            when press_now {
+                it <= it + 1
+            }
+        }
+    }
+
+    // The pulse is born on this wire: the button is down now, and it
+    // was up one clock edge ago. That single comparison against the
+    // reg's own past is what turns a level into an edge.
+    wire press_now : Bit {
+        it := !prev_button && button
+    }
+}

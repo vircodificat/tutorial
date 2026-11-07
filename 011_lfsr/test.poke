@@ -1,0 +1,381 @@
+top top::Lfsr
+vcd trace.vcd
+
+# Nothing to pin: the Lfsr is free-running, planted by its `initial`
+# seed, and every step below is one full clock cycle.
+
+# --- The register wakes up holding its seed. ---
+assert top.out == 0xAC
+
+# --- The golden opening: the first ten bytes of the sequence. ---
+# These come straight from the taps: with the right polynomial
+# this is exactly the path the register must walk.
+tick
+advance
+assert top.out == 0x58
+tick
+advance
+assert top.out == 0xB1
+tick
+advance
+assert top.out == 0x62
+tick
+advance
+assert top.out == 0xC5
+tick
+advance
+assert top.out == 0x8A
+tick
+advance
+assert top.out == 0x15
+tick
+advance
+assert top.out == 0x2A
+tick
+advance
+assert top.out == 0x55
+tick
+advance
+assert top.out == 0xAA
+tick
+advance
+assert top.out == 0x54
+
+# --- A long walk through the middle of the sequence. ---
+# A maximal LFSR visits every nonzero byte and never the zero one:
+# the moment `out` reads 0, the register has locked up for good.
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out == 0x9A
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out == 0xF7
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out != 0
+tick
+advance
+assert top.out == 0x74
+
+# --- One hundred twenty steps, still on the golden path, ---
+# --- still never zero. The garden keeps its promises.     ---
+
+exit

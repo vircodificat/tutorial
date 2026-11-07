@@ -1,0 +1,154 @@
+top top::DoubleDabble
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.binary 0
+poke top.start false
+
+# Power-on: no conversion has ever been asked for, so the
+# module rests idle with its digits at zero.
+assert top.done == true
+assert top.hundreds == 0
+assert top.tens == 0
+assert top.ones == 0
+
+# An idle module stays idle: a clock with no `start` in it
+# changes nothing.
+tick
+assert top.done == true
+assert top.ones == 0
+
+# --- 250: a full three-digit conversion, watched closely. ---
+poke top.binary 250
+poke top.start true
+tick
+poke top.start false
+# `start` was accepted: the loop is running, so `done` falls.
+assert top.done == false
+# The heartbeat: four clocks, four steps. One step per clock.
+tick 4
+assert top.step == 4
+assert top.done == false
+# Four more clocks carry the loop through its remaining steps.
+tick 4
+assert top.done == true
+# 250 in binary ripens into the digits 2, 5, 0.
+assert top.hundreds == 2
+assert top.tens == 5
+assert top.ones == 0
+
+# The answer rests in the bed until the next conversion: an
+# idle clock neither advances nor disturbs it.
+tick
+assert top.done == true
+assert top.hundreds == 2
+
+# --- 0: the empty bed. Zero in, zero out. ---
+poke top.binary 0
+poke top.start true
+tick
+poke top.start false
+assert top.done == false
+tick 8
+assert top.done == true
+assert top.hundreds == 0
+assert top.tens == 0
+assert top.ones == 0
+
+# --- 1: the smallest harvest. ---
+poke top.binary 1
+poke top.start true
+tick
+poke top.start false
+tick 8
+assert top.done == true
+assert top.hundreds == 0
+assert top.tens == 0
+assert top.ones == 1
+
+# --- 9: one digit, at its ceiling. No carries anywhere. ---
+poke top.binary 9
+poke top.start true
+tick
+poke top.start false
+tick 8
+assert top.done == true
+assert top.hundreds == 0
+assert top.tens == 0
+assert top.ones == 9
+
+# --- 10: the first carry, as the ones digit tips over. ---
+poke top.binary 10
+poke top.start true
+tick
+poke top.start false
+tick 8
+assert top.done == true
+assert top.hundreds == 0
+assert top.tens == 1
+assert top.ones == 0
+
+# --- 50: the ones digit sits at exactly 5 when the shift ---
+# --- comes for it. The add-3 rule's favorite case.       ---
+poke top.binary 50
+poke top.start true
+tick
+poke top.start false
+assert top.done == false
+tick 8
+assert top.done == true
+assert top.hundreds == 0
+assert top.tens == 5
+assert top.ones == 0
+
+# --- 99: both low digits at their ceiling; every shift ---
+# --- carries somewhere.                                ---
+poke top.binary 99
+poke top.start true
+tick
+poke top.start false
+tick 8
+assert top.done == true
+assert top.hundreds == 0
+assert top.tens == 9
+assert top.ones == 9
+
+# --- 100: the first time the hundreds digit earns its keep. ---
+poke top.binary 100
+poke top.start true
+tick
+poke top.start false
+tick 8
+assert top.done == true
+assert top.hundreds == 1
+assert top.tens == 0
+assert top.ones == 0
+
+# --- 255: the whole bed full. Every digit adjusts, every ---
+# --- carry lands, and the last bit arrives on the last   ---
+# --- step of the last clock.                             ---
+poke top.binary 255
+poke top.start true
+tick
+poke top.start false
+tick 8
+assert top.done == true
+assert top.hundreds == 2
+assert top.tens == 5
+assert top.ones == 5
+
+# Back-to-back harvests: a fresh `start` clears the bed and
+# the counter, so each conversion begins from bare soil.
+poke top.binary 123
+poke top.start true
+tick
+poke top.start false
+tick 8
+assert top.done == true
+assert top.hundreds == 1
+assert top.tens == 2
+assert top.ones == 3
+
+exit

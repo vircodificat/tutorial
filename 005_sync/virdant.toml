@@ -1,0 +1,5 @@
+[project]
+name = "005_sync"
+
+[prog]
+top = "top::Synchronizer"

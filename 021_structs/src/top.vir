@@ -1,0 +1,98 @@
+//! One pixel, held and faded: data that travels together lives together.
+
+//> `Pixel` bundles a pixel's three color channels into one value.
+//> Once bundled, the pixel travels whole — through registers, ports,
+//> and submodules — instead of as three loose wires.
+pub struct type Pixel {
+    red   : Word[8]
+    green : Word[8]
+    blue  : Word[8]
+}
+
+//> `Fader` hands back the pixel it is given, one shade darker:
+//> every channel steps down by one, and black stays black.
+mod Fader {
+    incoming pixel : Pixel
+
+    // Each channel is darkened separately. The fade clamps at
+    // black: a channel already at 0 stays at 0 rather than
+    // wrapping around into a blaze of 255.
+    wire darker_red : Word[8] {
+        it := mux(pixel->red == 0, 0, pixel->red - 1)
+    }
+
+    wire darker_green : Word[8] {
+        it := mux(pixel->green == 0, 0, pixel->green - 1)
+    }
+
+    wire darker_blue : Word[8] {
+        it := mux(pixel->blue == 0, 0, pixel->blue - 1)
+    }
+
+    outgoing faded : Pixel dependson pixel {
+        // A struct literal rebuilds the whole pixel from scratch:
+        // every field is set here, from an expression. `->` reads
+        // a field of the value you name — here, the pixel that
+        // just arrived at the fader's door.
+        it := ${
+            red   = darker_red,
+            green = pixel->green,
+            blue  = pixel->blue,
+        }
+    }
+}
+
+//> `PixelFader` keeps one pixel on its canvas. The channels arrive
+//> on separate wires, are bundled into a `Pixel` at the boundary,
+//> and from there travel the whole design as a single value — only
+//> unpacked again for the display at the far end.
+pub mod PixelFader {
+    incoming clock : Clock
+
+    incoming red   : Word[8]
+    incoming green : Word[8]
+    incoming blue  : Word[8]
+    incoming load  : Bit
+    incoming fade  : Bit
+
+    // The held pixel, unpacked for the display: one channel per
+    // port, exactly as the channels arrived.
+    outgoing current_red : Word[8] {
+        it := canvas->red
+    }
+
+    outgoing current_green : Word[8] {
+        it := canvas->green
+    }
+
+    outgoing current_blue : Word[8] {
+        it := canvas->blue
+    }
+
+    mod fader of Fader {
+        it.pixel := canvas
+    }
+
+    reg canvas : Pixel {
+        // A struct-typed reg holds one whole pixel, and `initial`
+        // seeds it with a whole one too: black.
+        initial it <= ${ red = 0, green = 0, blue = 0 }
+        if {
+            when load {
+                it <= pixel
+            }
+            // One shade darker per tick, handed over by the fader
+            // as a single whole value.
+            when fade && !load {
+                it <= fader.faded
+            }
+        }
+    }
+
+    // The boundary where three loose channels become one pixel.
+    // Bundled once here, the struct does all of its traveling
+    // whole.
+    wire pixel : Pixel {
+        it := ${ red = red, green = green, blue = blue }
+    }
+}

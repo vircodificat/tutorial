@@ -1,0 +1,197 @@
+top top::UsbEncoder
+vcd trace.vcd
+
+# Pin every incoming port before doing anything else.
+# An undriven port is free to wander between timesteps,
+# and a wandering input makes for a very confusing garden.
+poke top.data 0
+poke top.send false
+
+# Power-on: USB idles high (the J state), so the wire rests at 1.
+assert top.usb_bit == true
+
+# --- Byte 0x00: eight 0s, least significant bit first. ---
+# Every bit is a 0, so NRZI toggles the line every bit period:
+# maximum edges, the liveliest wire USB ever sees.
+poke top.data 0x00
+poke top.send true
+tick
+poke top.send false
+# Bit 0 = 0: a 0 toggles the line. 1 -> 0
+tick
+assert top.usb_bit == false
+# Bit 1 = 0: toggle. 0 -> 1
+tick
+tick
+assert top.usb_bit == true
+# Bit 2 = 0: toggle. 1 -> 0
+tick
+tick
+assert top.usb_bit == false
+# Bit 3 = 0: toggle. 0 -> 1
+tick
+tick
+assert top.usb_bit == true
+# Bit 4 = 0: toggle. 1 -> 0
+tick
+tick
+assert top.usb_bit == false
+# Bit 5 = 0: toggle. 0 -> 1
+tick
+tick
+assert top.usb_bit == true
+# Bit 6 = 0: toggle. 1 -> 0
+tick
+tick
+assert top.usb_bit == false
+# Bit 7 = 0: toggle. 0 -> 1
+tick
+tick
+assert top.usb_bit == true
+
+# Between bytes the line simply rests at whatever level it reached.
+tick
+assert top.usb_bit == true
+
+# --- Byte 0xFE: 0b1111_1110, so LSB first: one 0, then seven 1s. ---
+# Seven 1s in a row would leave the wire silent for ages, and the
+# receiver keeps its clock by watching edges. Watch for the stuffed
+# 0 slipping in after the sixth consecutive 1.
+poke top.data 0xFE
+poke top.send true
+tick
+poke top.send false
+# Bit 0 = 0: a 0 toggles. 1 -> 0
+tick
+assert top.usb_bit == false
+# Bit 1 = 1: a 1 holds the line. Still 0.
+tick
+tick
+assert top.usb_bit == false
+# Bit 2 = 1: hold. Two 1s in a row, and the line has not moved.
+tick
+tick
+assert top.usb_bit == false
+# Bit 3 = 1: hold. Three.
+tick
+tick
+assert top.usb_bit == false
+# Bit 4 = 1: hold. Four.
+tick
+tick
+assert top.usb_bit == false
+# Bit 5 = 1: hold. Five.
+tick
+tick
+assert top.usb_bit == false
+# Bit 6 = 1: the sixth consecutive 1. The line holds, but the
+# transmitter now owes the wire a stuffed 0 before the next bit.
+tick
+tick
+assert top.usb_bit == false
+# The stuffed 0 goes out: a real 0 as far as NRZI cares, so the
+# line toggles. 0 -> 1. This edge is the whole point of stuffing.
+tick
+tick
+assert top.usb_bit == true
+# Bit 7 = 1: hold. The byte ends one bit period later than eight
+# bits would suggest, because the stuffed 0 took its own slot.
+tick
+tick
+assert top.usb_bit == true
+
+tick
+assert top.usb_bit == true
+
+# --- Byte 0x03: 0b0000_0011, so LSB first: two 1s, then six 0s. ---
+# A short run of 1s, then a 0 arrives and the run is over. Nothing
+# gets stuffed when the line is this lively.
+poke top.data 0x03
+poke top.send true
+tick
+poke top.send false
+# Bit 0 = 1: hold. 1 stays 1.
+tick
+assert top.usb_bit == true
+# Bit 1 = 1: hold again. Two quiet periods, but only two.
+tick
+tick
+assert top.usb_bit == true
+# Bit 2 = 0: toggle. 1 -> 0. The run of 1s is broken at two.
+tick
+tick
+assert top.usb_bit == false
+# Bit 3 = 0: toggle. 0 -> 1
+tick
+tick
+assert top.usb_bit == true
+# Bit 4 = 0: toggle. 1 -> 0
+tick
+tick
+assert top.usb_bit == false
+# Bit 5 = 0: toggle. 0 -> 1
+tick
+tick
+assert top.usb_bit == true
+# Bit 6 = 0: toggle. 1 -> 0
+tick
+tick
+assert top.usb_bit == false
+# Bit 7 = 0: toggle. 0 -> 1
+tick
+tick
+assert top.usb_bit == true
+
+tick
+assert top.usb_bit == true
+
+# --- Byte 0xFF: eight 1s, the stuffing stress test. ---
+# Six 1s go out, the stuffed 0 takes a slot in the middle of the
+# byte, and the last two 1s finish the job after it.
+poke top.data 0xFF
+poke top.send true
+tick
+poke top.send false
+# Bit 0 = 1: hold.
+tick
+assert top.usb_bit == true
+# Bit 1 = 1: hold.
+tick
+tick
+assert top.usb_bit == true
+# Bit 2 = 1: hold.
+tick
+tick
+assert top.usb_bit == true
+# Bit 3 = 1: hold.
+tick
+tick
+assert top.usb_bit == true
+# Bit 4 = 1: hold.
+tick
+tick
+assert top.usb_bit == true
+# Bit 5 = 1: the sixth consecutive 1. Hold, and owe a stuffed 0.
+tick
+tick
+assert top.usb_bit == true
+# The stuffed 0 toggles the line. 1 -> 0. Mid-byte, mid-stream,
+# exactly where a real USB receiver would be grateful for it.
+tick
+tick
+assert top.usb_bit == false
+# Bit 6 = 1: hold. The data resumes after the stuffed 0.
+tick
+tick
+assert top.usb_bit == false
+# Bit 7 = 1: hold, and the byte is done.
+tick
+tick
+assert top.usb_bit == false
+
+# The line rests where the last edge left it, waiting for the
+# next byte — and the next run of edges for the receiver to follow.
+tick
+assert top.usb_bit == false
+
+exit

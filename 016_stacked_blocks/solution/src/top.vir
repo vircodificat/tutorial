@@ -1,0 +1,55 @@
+//! A water tank that takes orders -- and knows which order is boss.
+
+//> `WaterTank` holds a level of water between empty and its brim
+//> at 9. Three requests can arrive on the same clock edge: `drain`
+//> empties the tank, `fill` tops it up to the brim, and `drop`
+//> raises the level by one.
+pub mod WaterTank {
+    incoming clock : Clock
+
+    // Three requests, any of which may land on the same clock edge.
+    incoming drain : Bit
+    incoming fill : Bit
+    incoming drop : Bit
+
+    // A reg holds its value between clock edges. On any given edge,
+    // several `when` arms may want to speak -- but they are tried
+    // from top to bottom, and the FIRST one whose condition is true
+    // fires; every arm below is skipped until the next edge. The
+    // house rules, strongest first:
+    //
+    //     1. drain -- empty the tank, overruling everything
+    //     2. fill  -- top the tank up to the brim
+    //     3. drop  -- raise the level by one
+    //
+    // So the boss comes first. And if no arm fires at all, the reg
+    // simply keeps what it had -- no `else { it <= it }` required.
+    reg water : Word[4] {
+        initial it <= 0
+        if {
+            // A drain empties the tank to the last drop.
+            when drain {
+                it <= 0
+            }
+            // A fill tops the tank right up to the brim.
+            when fill {
+                it <= 9
+            }
+            // A drop raises the level, unless the tank is already
+            // brimming and the drop would spill over the brim.
+            when drop && it != 9 {
+                it <= it + 1
+            }
+        }
+    }
+
+    //> The water level, straight from the register.
+    outgoing level : Word[4] {
+        it := water
+    }
+
+    //> True when the water has reached the brim.
+    outgoing brimming : Bit {
+        it := water == 9
+    }
+}

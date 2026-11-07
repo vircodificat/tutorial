@@ -1,0 +1,92 @@
+//! SPI controller, mode 0: one byte travels out and one travels back
+//! in, over the same eight sck pulses.
+
+//> `SpiMaster` owns the clock line: it pulses `sck` itself, walks a
+//> byte out of `mosi` most-significant bit first, and gathers the
+//> device's answer on `miso` at the same time.
+//>
+//> Mode 0 timing: `sck` idles low, data is *sampled* on the leading
+//> edge (sck rising) and *changed* on the trailing edge (sck falling).
+pub mod SpiMaster {
+    incoming clock : Clock
+
+    // Offer a byte with a one-cycle pulse on `start`; the transfer
+    // then runs itself until `busy` drops back low.
+    incoming start : Bit
+    incoming data_to_send : Word[8]
+
+    // The device's reply arrives here, one bit per leading edge.
+    incoming miso : Bit
+
+    // `mosi` shows whatever sits atop the transmit shift register;
+    // only a trailing edge may change it.
+    outgoing mosi : Bit {
+        it := shift_out[7]
+    }
+
+    outgoing sck : Bit {
+        it := busy && phase == 1
+    }
+
+    // High from an accepted `start` until the eighth bit's trailing
+    // edge.
+    outgoing reg busy : Bit {
+        initial it <= false
+    }
+
+    // The receive shift register, shown straight on the port: each
+    // leading edge pushes the sampled `miso` in at the bottom, and
+    // after eight of them the first bit has climbed to the top.
+    outgoing reg received : Word[8] {
+        initial it <= 0
+    }
+
+    // One bit spans two sck half-periods, each one clock cycle here:
+    // `phase` walks 0 (low), 1 (high), 0, 1... across a byte.
+    reg phase : Word[1] {
+        initial it <= 0
+    }
+
+    // Bits sampled so far; 8 is the finish line.
+    reg bit_index : Word[4] {
+        initial it <= 0
+    }
+
+    // The transmit shift register: shifting left drops the bit that
+    // just went out and promotes the next one underneath.
+    reg shift_out : Word[8] {
+        initial it <= 0
+    }
+
+    if {
+        // A `start` pulse is honored only while the line is idle.
+        when start && !busy {
+            busy <= true
+            shift_out <= data_to_send
+            received <= 0
+            bit_index <= 0
+        }
+        when busy if {
+            // Leading edge: `sck` rises just after this clock edge,
+            // and both sides sample what the other has been holding.
+            when phase == 0 {
+                phase <= 1
+                received <= word(received[7..0], miso)
+                bit_index <= bit_index + 1
+                shift_out <= word(shift_out[7..0], 0w1)
+            }
+            // Trailing edge: `sck` falls just after this clock edge.
+            // By the mode 0 rules, the next transmit bit belongs on
+            // `mosi` here — riding a full low half-period ahead of
+            // the next leading edge that will listen to it.
+            when phase == 1 {
+                phase <= 0
+                if {
+                    when bit_index == 8 {
+                        busy <= false
+                    }
+                }
+            }
+        }
+    }
+}

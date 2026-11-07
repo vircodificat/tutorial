@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial FIFO lesson: push and pop bytes through a two-slot queue."
+script = "test.poke"
