@@ -26,7 +26,7 @@ pub mod ModCounter {
             // Wrap: when the count reaches 5, the NEXT clock edge snaps
             // it back to zero. `count` shows 5 for exactly one cycle
             // before resetting.
-            when count == 5 {
+            when it == 5 {
                 it <= 0
             }
             // No arm above fired: just count up.

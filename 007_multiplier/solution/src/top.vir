@@ -87,7 +87,7 @@ pub mod Multiplier {
             when start {
                 it <= true
             }
-            when busy && step == 3 {
+            when it && step == 3 {
                 it <= false
             }
         }

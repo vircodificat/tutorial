@@ -86,7 +86,7 @@ pub mod Top for virt::Virt {
     reg row : Word[4] {
         initial it <= 0
         if {
-            when accept && col == row_len && row == 8 {
+            when accept && col == row_len && it == 8 {
                 it <= 0
             }
             when accept && col == row_len {
@@ -98,7 +98,7 @@ pub mod Top for virt::Virt {
     reg col : Word[3] {
         initial it <= 0
         if {
-            when accept && col == row_len {
+            when accept && it == row_len {
                 it <= 0
             }
             when accept {

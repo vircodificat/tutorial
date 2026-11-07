@@ -84,7 +84,7 @@ mod BusMaster {
     reg step : Word[3] {
         initial it <= 0
         if {
-            when step == 0 && go {
+            when it == 0 && go {
                 it <= 1
             }
             when busy && wishbone.ack {

@@ -68,7 +68,7 @@ pub mod TrafficLight {
     reg timer : Word[2] {
         initial it <= 3
         if {
-            when timer == 0 {
+            when it == 0 {
                 it <= next_timer
             }
             else {
