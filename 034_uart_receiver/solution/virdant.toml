@@ -1,0 +1,5 @@
+[project]
+name = "034_uart_receiver"
+
+[prog]
+top = "top::UartReceiver"

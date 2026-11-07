@@ -259,6 +259,9 @@ checklist of coverage, not a schedule.
 * Traffic-light FSM with a timer reg, safety invariants (lesson 018)
 * Seven-segment decoder as a match lookup table (lesson 019)
 * USB NRZI encoding + bit stuffing (lesson 020)
+* Shift registers: serial-in parallel-out, left/right slides, parallel load (lesson 033)
+* UART receiver framing: start-bit detection, mid-bit sampling, stop-bit check (lesson 034)
+* Priority encoders and arbiters: fixed priority, round-robin with rotating pointer (lesson 035)
 
 ### Wanted
 

@@ -1,0 +1,136 @@
+//! The other half of the UART story: listening on one wire.
+
+//> `UartReceiver` listens to one wire and rebuilds the bytes that
+//> walk across it. The frame is the same one the transmitter
+//> speaks: one low start bit, eight data bits with the least
+//> significant one first, one high stop bit. The line idles high,
+//> and one bit lasts 4 clock cycles here -- a fast fake baud with
+//> the same arithmetic as a real one.
+pub mod UartReceiver {
+    incoming clock : Clock
+
+    // The serial line. It rests high between frames; a fall opens
+    // a frame.
+    incoming rx : Bit
+
+    // Pops @Valid(byte) for exactly one cycle whenever a whole
+    // frame lands intact. A frame whose stop bit never shows up
+    // is dropped quietly -- nobody is told about damaged goods.
+    outgoing reg out : Valid[Word[8]] {
+        initial it <= @Invalid()
+        it <= mux(stop_ok, @Valid(shifter), @Invalid())
+    }
+
+    // `ticks` counts clock cycles from the moment the line falls.
+    // One bit spans 4 cycles, so the receiver samples every 4th
+    // cycle -- one cycle into each new bit period, comfortably
+    // past the moment the line may have changed.
+    reg ticks : Word[6] {
+        initial it <= 0
+        it <= mux(in_frame, it + 1, 0)
+    }
+
+    // The frame, told as four states. `Idle` waits for the line
+    // to fall; `Start` checks the fall was no glitch; `Bits`
+    // gathers the eight data bits one sample at a time; `Stop`
+    // expects the line back high before the frame is believed.
+    reg state : RxState {
+        initial it <= #Idle
+        match it {
+            with #Idle {
+                // The line rests high. When it falls, a frame is
+                // knocking: start counting from zero.
+                if {
+                    when rx == false {
+                        it <= #Start
+                    }
+                }
+            }
+            with #Start {
+                // First sample, one cycle after the fall: the line
+                // should still be low. A high line here was just a
+                // bounce, not a start bit -- back to waiting.
+                if {
+                    when sample {
+                        it <= match rx {
+                            with false => @Bits(0)
+                            with true => #Idle
+                        }
+                    }
+                }
+            }
+            with @Bits(bit) {
+                // Each sample takes one more data bit.
+                if {
+                    when sample {
+                        it <= mux(bit == 7, #Stop, @Bits(bit + 1))
+                    }
+                }
+            }
+            with #Stop {
+                // Last sample: the stop bit should hold the line
+                // high. Either way the frame is over.
+                if {
+                    when sample {
+                        it <= #Idle
+                    }
+                }
+            }
+        }
+    }
+
+    // The eight data bits collect here. Each data sample walks the
+    // line's value in at the top -- the first bit received is the
+    // byte's least significant one, and after eight slides it has
+    // walked all the way down to bit 0, where the byte reads
+    // right-side up.
+    reg shifter : Word[8] {
+        initial it <= 0
+        if {
+            when data_sample {
+                it <= word(it[7..0], rx)
+            }
+        }
+    }
+
+    // True on every cycle the receiver is inside a frame.
+    wire in_frame : Bit {
+        it := match state {
+            with #Idle => false
+            else => true
+        }
+    }
+
+    // The sampling metronome: every 4th cycle inside a frame,
+    // counted from the fall of the line. `ticks[1..0]` is the low
+    // two bits of the counter, so this fires at 0, 4, 8, ...
+    wire sample : Bit {
+        it := in_frame && ticks[2..0] == 0w2
+    }
+
+    // True exactly on the cycles when a data bit is being sampled.
+    wire data_sample : Bit {
+        it := match state {
+            with @Bits(_) => sample
+            else => false
+        }
+    }
+
+    // The stop-bit sample, and whether the line was high for it.
+    wire stop_ok : Bit {
+        it := match state {
+            with #Stop => sample && rx
+            else => false
+        }
+    }
+}
+
+//> `RxState` is the receiver's walk through a frame: waiting,
+//> checking the start bit, gathering eight data bits (counting
+//> which one in `bit`), and listening for the stop bit.
+union type RxState {
+    Idle()
+    Start()
+    Bits(bit : Word[3])
+    Stop()
+}

@@ -1,0 +1,5 @@
+[project]
+name = "033_shift_register"
+
+[prog]
+top = "top::ShiftRegister"

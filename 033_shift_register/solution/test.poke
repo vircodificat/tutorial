@@ -1,0 +1,98 @@
+top top::ShiftRegister
+vcd trace.vcd
+
+# Park the register: hold mode, serial line quiet, nothing to load.
+poke top.mode 0
+poke top.sin false
+poke top.din 0x00
+tick
+
+# --- Parallel load: 0x0F lands in one cycle. ---
+poke top.mode 3
+poke top.din 0x0F
+tick
+poke top.mode 0
+assert top.value == 0x0F
+
+# --- Slide left with a quiet serial line. ---
+# 0x0F slides left twice: 0b00001111 -> 0b00011110 -> 0b00111100.
+poke top.mode 2
+poke top.sin false
+tick
+assert top.value == 0x1E
+tick
+assert top.value == 0x3C
+
+# --- Slide left again, this time with bits trickling in. ---
+# 0x3C -> 0x79 (a 1 enters at the bottom) -> 0xF3.
+poke top.sin true
+tick
+assert top.value == 0x79
+tick
+assert top.value == 0xF3
+
+# While the window slides left, bit 7 is the one about to fall.
+assert top.sout == true
+poke top.sin false
+tick
+assert top.value == 0xE6
+assert top.sout == true
+tick
+assert top.value == 0xCC
+assert top.sout == true
+
+# A word with a quiet top shows a quiet sout: 0x35 has bit 7 = 0.
+poke top.mode 3
+poke top.din 0x35
+tick
+poke top.mode 2
+assert top.sout == false
+poke top.sin false
+tick
+assert top.value == 0x6A
+assert top.sout == false
+tick
+assert top.value == 0xD4
+assert top.sout == true
+
+# --- Slide right with a quiet serial line. ---
+# 0xD4 slides right three times: 0b11010100 -> 0b01101010 ->
+# 0b00110101 -> 0b00011010. Now bit 0 is the one about to fall,
+# and it is quiet.
+poke top.mode 1
+assert top.sout == false
+tick
+assert top.value == 0x6A
+assert top.sout == false
+tick
+assert top.value == 0x35
+assert top.sout == true
+tick
+assert top.value == 0x1A
+
+# --- Slide right with a noisy serial line. ---
+# Load 0x80 and let 1s drip in at the top:
+# 0b10000000 -> 0b11000000 -> 0b11100000.
+poke top.mode 3
+poke top.din 0x80
+tick
+poke top.mode 1
+assert top.sout == false
+poke top.sin true
+tick
+assert top.value == 0xC0
+assert top.sout == false
+tick
+assert top.value == 0xE0
+assert top.sout == false
+
+# --- Hold still: nothing moves, however long the afternoon. ---
+poke top.mode 0
+poke top.sin false
+tick
+tick
+tick
+assert top.value == 0xE0
+assert top.sout == false
+
+exit

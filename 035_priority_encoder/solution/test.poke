@@ -1,0 +1,106 @@
+top top::Top
+vcd trace.vcd
+
+# Quiet first: nobody is asking, nobody is served.
+poke top.req 0b0000
+tick
+assert top.fixed_grant == #Invalid()
+assert top.round_grant == #Invalid()
+
+# --- Two requesters, one queue: fixed serves the senior one forever. ---
+# Requesters 1 and 3 both ask, and keep asking. The fixed arbiter
+# answers with 1 every single cycle. The round robin alternates:
+# after granting 1, the pointer steps to 2, so requester 3 (the only
+# one at or past it) gets the next turn, then the pointer wraps.
+poke top.req 0b1010
+tick
+assert top.fixed_grant == #Valid(1)
+assert top.round_grant == #Valid(1)
+tick
+assert top.fixed_grant == #Valid(1)
+assert top.round_grant == #Valid(3)
+tick
+assert top.fixed_grant == #Valid(1)
+assert top.round_grant == #Valid(1)
+tick
+assert top.fixed_grant == #Valid(1)
+assert top.round_grant == #Valid(3)
+
+# --- The most senior shows up and still has to wait its turn. ---
+# Requester 0 joins the pile. Fixed priority answers with 0 at
+# once. The round robin was already serving the line: pointer 1
+# means requester 0 is behind two others, and it stays behind
+# until the pointer swings back around.
+poke top.req 0b1011
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(0)
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(1)
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(3)
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(0)
+
+# --- The starving garden: fixed priority starves a requester. ---
+# Requesters 0 and 1 both ask, over and over. Fixed priority
+# serves 0 on every cycle and requester 1 never gets a word in.
+# The round robin takes turns, wrapping past the end of the line
+# when the pointer runs off it.
+poke top.req 0b0011
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(1)
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(0)
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(1)
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(0)
+
+# --- A lone senior requester below the pointer. ---
+# Only requester 0 asks now. The pointer sits past it, so every
+# grant comes from the wrap-around arm -- and since the pointer
+# always parks just past the winner, it stays put at 1.
+poke top.req 0b0001
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(0)
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(0)
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(0)
+
+# --- A full sweep of the line. ---
+# Everybody asks. Fixed priority pins the answer at 0 forever.
+# The round robin visits every requester in turn -- starting at
+# the pointer, 1 -- and wraps home to do it again.
+poke top.req 0b1111
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(1)
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(2)
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(3)
+tick
+assert top.fixed_grant == #Valid(0)
+assert top.round_grant == #Valid(0)
+
+# Quiet again: both answers fold away.
+poke top.req 0b0000
+tick
+assert top.fixed_grant == #Invalid()
+assert top.round_grant == #Invalid()
+
+exit

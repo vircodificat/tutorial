@@ -1,0 +1,132 @@
+//! Two arbiters watching the same queue of requesters: one fixed
+//! in its ways, one that makes everyone take turns.
+
+//> `FixedPriority` answers a bundle of requests with the most
+//> senior requester's index: requester 0 outranks requester 1,
+//> and so on. When nobody asks, the answer is @Invalid().
+pub mod FixedPriority {
+    // Requester i asks by setting bit i of `req`.
+    incoming req : Word[4]
+
+    // The winner's index, or @Invalid() on a quiet cycle.
+    outgoing grant : Valid[Word[2]] dependson req {
+        // The when arms are checked in order, so requester 0
+        // wins every tie: priority by arm order.
+        it := if {
+            when !any(req) => @Invalid()
+            when req[0] => @Valid(0w2)
+            when req[1] => @Valid(1w2)
+            when req[2] => @Valid(2w2)
+            else => @Valid(3w2)
+        }
+    }
+}
+
+//> `RoundRobin` answers the same requests, but it keeps a rotating
+//> pointer: after each grant the pointer steps past the winner, so
+//> the next turn goes to the most senior requester at or after the
+//> pointer -- wrapping back around to 0 when it runs off the end.
+pub mod RoundRobin {
+    incoming clock : Clock
+
+    // Requester i asks by setting bit i of `req`.
+    incoming req : Word[4]
+
+    // The winner's index, or @Invalid() on a quiet cycle. The
+    // decision is made in a wire, and the register answers at the
+    // clock edge: once granted, the answer holds still for a full
+    // cycle, however fast the pointer behind it is spinning.
+    outgoing reg grant : Valid[Word[2]] {
+        initial it <= @Invalid()
+        it <= winner
+    }
+
+    // The decision itself: combinational, read by both the grant
+    // register and the pointer.
+    wire winner : Valid[Word[2]] {
+        it := if {
+            when !any(req) => @Invalid()
+            // Somebody at or after the pointer is still owed a
+            // turn: serve the most senior of them.
+            when any(eligible) => @Valid(first_eligible)
+            // Everyone the pointer owed has stepped aside: wrap
+            // around and serve the most senior of the leftovers.
+            else => @Valid(first_req)
+        }
+    }
+
+    // The next turn belongs to whoever sits at or past the
+    // pointer. It steps past the winner after every grant --
+    // and Word[2] arithmetic wraps for free: granting 3 puts
+    // the pointer back at 0.
+    reg pointer : Word[2] {
+        initial it <= 0
+        match winner {
+            with @Valid(w) {
+                it <= w + 1
+            }
+            with @Invalid() {
+                // Nobody was served this cycle: the pointer
+                // stands still.
+            }
+        }
+    }
+
+    // The requests the pointer still owes a turn: the bits at and
+    // above the pointer's position, with everything below it
+    // masked off. One arm per pointer value; the slices are
+    // exclusive on top, so req[4..1] is bits 3 down to 1.
+    wire eligible : Word[4] {
+        it := match pointer {
+            with 0 => req
+            with 1 => word(req[4..1], 0w1)
+            with 2 => word(req[4..2], 0w2)
+            with 3 => word(req[4..3], 0w3)
+        }
+    }
+
+    // The most senior requester anywhere: the lowest set bit.
+    // The only reader checks that somebody is asking first.
+    wire first_req : Word[2] {
+        it := if {
+            when req[0] => 0w2
+            when req[1] => 1w2
+            when req[2] => 2w2
+            else => 3w2
+        }
+    }
+
+    // The most senior eligible requester: the lowest set bit at
+    // or after the pointer.
+    wire first_eligible : Word[2] {
+        it := if {
+            when eligible[0] => 0w2
+            when eligible[1] => 1w2
+            when eligible[2] => 2w2
+            else => 3w2
+        }
+    }
+}
+
+//> `Top` parks both arbiters on the same wire so their two
+//> philosophies can be watched side by side.
+pub mod Top {
+    incoming clock : Clock
+    incoming req   : Word[4]
+
+    outgoing fixed_grant : Valid[Word[2]] dependson req
+    // `round.grant` is a registered answer: no combinational
+    // dependency to declare.
+    outgoing round_grant : Valid[Word[2]]
+
+    mod fixed of FixedPriority {
+        it.req   := req
+    }
+    mod round of RoundRobin {
+        it.clock := clock
+        it.req   := req
+    }
+
+    fixed_grant := fixed.grant
+    round_grant := round.grant
+}

@@ -1,0 +1,54 @@
+//! A shift register: eight bits with a window that slides.
+
+//> `ShiftRegister` is eight bits of memory with a window over
+//> them. It can hold still, slide one bit right (toward bit 0),
+//> slide one bit left (toward bit 7), or swap in a whole new word
+//> in a single cycle.
+pub mod ShiftRegister {
+    incoming clock : Clock
+
+    // The mode switch: 0 holds, 1 slides right, 2 slides left,
+    // 3 loads a whole word at once.
+    incoming mode : Word[2]
+
+    // The serial bit that enters while the window slides.
+    incoming sin : Bit
+
+    // The parallel word that lands when mode says load.
+    incoming din : Word[8]
+
+    // The eight bits themselves. A register with no matching arm
+    // simply holds its value -- so "hold" needs no arm at all.
+    outgoing reg value : Word[8] {
+        initial it <= 0
+        if {
+            // Slide right: `sin` enters at the top and every bit
+            // steps one place down. Bit 0 falls off the bottom,
+            // and that is exactly the bit `sout` shows.
+            when mode == 1w2 {
+                it <= word(sin, it[8..1])
+            }
+            // Slide left: the same walk in the other direction.
+            // `sin` enters at the bottom and bit 7 falls off
+            // the top.
+            when mode == 2w2 {
+                it <= word(sin, it[7..0])
+            }
+            // Parallel load: all eight bits land in one cycle.
+            when mode == 3w2 {
+                it <= din
+            }
+        }
+    }
+
+    // The bit about to fall off. Which bit that is depends on
+    // which way the window is sliding: a right slide loses bit
+    // 0, a left slide loses bit 7.
+    outgoing sout : Bit dependson mode {
+        it := match mode {
+            with 1w2 => value[0]
+            with 2w2 => value[7]
+            else => false
+        }
+    }
+}

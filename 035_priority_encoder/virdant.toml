@@ -1,0 +1,5 @@
+[project]
+name = "035_priority_encoder"
+
+[prog]
+top = "top::Top"

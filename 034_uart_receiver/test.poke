@@ -1,0 +1,101 @@
+top top::UartReceiver
+vcd trace.vcd
+
+# The line rests high between frames.
+poke top.rx true
+tick
+assert top.out == #Invalid()
+
+# --- Frame 1: 0x53 = 0b0101_0011, least significant bit first. ---
+poke top.rx false
+tick 4                        # the start bit holds the line low
+poke top.rx true              # data bit 0: 1
+tick 4
+poke top.rx true              # data bit 1: 1
+tick 4
+poke top.rx false             # data bit 2: 0
+tick 4
+poke top.rx false             # data bit 3: 0
+tick 4
+assert top.out == #Invalid()  # half a frame in, nothing reported yet
+poke top.rx true              # data bit 4: 1
+tick 4
+poke top.rx false             # data bit 5: 0
+tick 4
+poke top.rx true              # data bit 6: 1
+tick 4
+poke top.rx false             # data bit 7: 0
+tick 4
+poke top.rx true              # the stop bit: the line comes home
+tick 2                        # the receiver samples it here
+assert top.out == #Valid(0x53)
+tick 2                        # the rest of the stop bit
+assert top.out == #Invalid()
+tick 2                        # idle again
+assert top.out == #Invalid()
+
+# --- A one-cycle dip is a bounce, not a frame. ---
+poke top.rx false
+tick                          # the line falls...
+poke top.rx true
+tick 8                        # ...and pops right back up
+assert top.out == #Invalid()
+tick
+assert top.out == #Invalid()
+
+# --- Frame 2: 0x69 = 0b0110_1001, but the stop bit never arrives. ---
+poke top.rx false
+tick 4                        # start bit
+poke top.rx true              # data bit 0: 1
+tick 4
+poke top.rx false             # data bit 1: 0
+tick 4
+poke top.rx false             # data bit 2: 0
+tick 4
+poke top.rx true              # data bit 3: 1
+tick 4
+assert top.out == #Invalid()
+poke top.rx false             # data bit 4: 0
+tick 4
+poke top.rx true              # data bit 5: 1
+tick 4
+poke top.rx true              # data bit 6: 1
+tick 4
+poke top.rx false             # data bit 7: 0
+tick 4
+poke top.rx false             # where the stop bit should be: the line stays low
+tick 3                        # the sample point comes and goes
+poke top.rx true              # the line limps back up, one cycle late
+tick 1
+assert top.out == #Invalid()  # no byte is believed without its stop bit
+tick 4
+assert top.out == #Invalid()
+
+# --- Frame 3: the same byte, this time with its stop bit. ---
+poke top.rx false
+tick 4                        # start bit
+poke top.rx true              # data bit 0: 1
+tick 4
+poke top.rx false             # data bit 1: 0
+tick 4
+poke top.rx false             # data bit 2: 0
+tick 4
+poke top.rx true              # data bit 3: 1
+tick 4
+poke top.rx false             # data bit 4: 0
+tick 4
+poke top.rx true              # data bit 5: 1
+tick 4
+poke top.rx true              # data bit 6: 1
+tick 4
+poke top.rx false             # data bit 7: 0
+tick 4
+poke top.rx true              # the stop bit arrives this time
+tick 2
+assert top.out == #Valid(0x69)
+tick 2
+assert top.out == #Invalid()
+tick 4                        # and the wire rests
+assert top.out == #Invalid()
+
+exit

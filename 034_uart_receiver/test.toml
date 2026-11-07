@@ -1,0 +1,3 @@
+kind = "poke"
+description = "Tutorial UART receiver lesson: listening for frames on a resting-high wire."
+script = "test.poke"
